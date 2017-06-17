@@ -2,16 +2,21 @@
 ;イベント口上
 ;-------------------------------------------------
 
+
 ;=================================================
 ;●各種イベント
 ;※ARGにイベント番号が入る。詳しくは資料フォルダの「era恋姫 イベント表」を参照
 ;※RETURNの値を0→1に変えると、デフォルトのメッセージが表示されなくなる
 ;=================================================
 @KOJO_EVENT_K53(ARG)
-
+;;豊姫ネームが変更されてても豊姫と記述すればいいおまじない。
+;;毎関数事に使う場合は呼ぶ。
+#DIM 豊姫
+豊姫 = NAME_TO_CHARA("豊姫")
 ;-------------------------------------------------
 ;ファーストキス実行
 ;再生の秘薬使うとここにくると思うけれどさて。
+;そのあたりのからみで優先順位は低め
 ;-------------------------------------------------
 IF ARG == 1
 	;恋慕 or 服従
@@ -33,10 +38,60 @@ ENDIF
 IF ARG == 2
 	;恋慕 or 服従
 	IF TALENT:恋慕 || TALENT:服従
-		;PRINTFORMW 
+		PRINTFORMW %CALLNAME:MASTER%の精一杯の勇気を受けた%ANAME(豊姫)%だったが、ほんの少しだけとまどった。
+		IF TALENT:恋慕
+			PRINTFORMW %ANAME(豊姫)%にとって%CALLNAME:MASTER%は、恋愛対象というよりは家族のような存在だったから。
+		ELSE
+			PRINTFORMW %ANAME(豊姫)%は、仕える主人である%CALLNAME:MASTER%に可愛がられるうち、家族同然の存在だと思っていたから。
+		PRINTL
+		PRINTFORMW 他の人間からすれば、なぜ彼女が%CALLNAME:MASTER%を家族などと思ったのか不思議でならないだろう。
+		PRINTFORMW だが%ANAME(豊姫)%にとって、心のつながりも体の交わりも、結ばれるかどうかよりも親しい相手であるかどうかが基準。
+		PRINTFORMW それは何も言わずに、家族と例えるのが妥当な自然さだった。
+		PRINTL
+		PRINTFORMW 「%CALLNAME:MASTER%の告白嬉しいわ。私も%CALLNAME:MASTER%のこと好きだもの」
+		PRINTFORMW 「けど……」
+		PRINTL
+		PRINTFORMW 「よりちゃんのことも好きよね？」
+		PRINTFORMW ここで依姫がどう関係するんだろう。
+		SIF CFLAG:依姫:好感度 > 1000
+			PRINTFORMW 依姫は、恋愛に不慣れでついどう接すればいいかわからないだけ、くだけた話し方が苦手で照れる様が可愛いい。
+		SIF TALENT:依姫:恋人
+			PRINTFORMW 気が付いたらその魅力に完全に虜になっていたんだから。だが、いいのだろうか。姉妹丼はある意味笑えない。
+		PRINTFORMW
+		PRINTFORMW 「うん、良かった」
+		PRINTFORMW 何かよくわからないが納得されてしまう。ちゃんとこちらの言葉として話していないのだが、それで十分だったようだ。
+		PRINTFORMW 「じゃあ、これからもっともっと好きにならないとね。お姉ちゃんはとっても手ごわいのだぞ」
+		PRINTFORMW 何がどう手ごわいのかわからない。だが、その人懐こさがとても心地よかった。
+		PRINTFORMW 安心した豊姫の頬は、ほんのりと赤く染まっていて、ぼんやりこちらを見つめているようだった。
+		PRINTL
+		PRINTL
+		PRINTFORMW 豊姫と恋人同士になりました。
 	;それ以外
 	ELSE
-		;PRINTFORMW 
+		PRINTFORMW %CALLNAME:MASTER%の精一杯の勇気を受けた%ANAME(豊姫)%だったが、非常にとまどった。
+		PRINTFORMW %ANAME(豊姫)%にとって%CALLNAME:MASTER%は、恋愛対象というよりは家族のような存在だったから。
+		PRINTL
+		PRINTFORMW 他の人間からすれば、なぜ彼女が%CALLNAME:MASTER%を家族などと思ったのか不思議でならないだろう。
+		PRINTFORMW だが%ANAME(豊姫)%にとって、心のつながりも体の交わりも、結ばれるかどうかよりも親しい相手であるかどうかが基準。
+		PRINTFORMW それは何も言わずに、家族と例えるのが妥当な自然さだった。
+		PRINTL
+		PRINTFORMW 「%CALLNAME:MASTER%の告白嬉しいわ。私も%CALLNAME:MASTER%のこと好きだもの」
+		PRINTFORMW 「けど……」
+		PRINTL
+		PRINTFORMW 「よりちゃんのことも好きよね？」
+		PRINTFORMW ここで依姫がどう関係するんだろう。
+		SIF CFLAG:依姫:好感度 > 1000
+			PRINTFORMW 依姫は恋愛に不慣れでついどう接すればいいかわからないだけ、くだけた話し方が苦手で照れる様が可愛いい。
+		SIF TALENT:依姫:恋人
+			PRINTFORMW 妹を囲ったなら姉までもと思ったら、もう止まらなかった。
+		PRINTFORMW
+		PRINTFORMW 「うん、良かった」
+		PRINTFORMW 何かよくわからないが納得されてしまう。ちゃんとこちらの言葉として話していないのだが、それで十分だったようだ。
+		PRINTFORMW 「じゃあ、これからもっともっと好きにならないとね。お姉ちゃんはとっても手ごわいのだぞ」
+		PRINTFORMW 何がどう手ごわいのかわからない。だが、その人懐こさがとても心地よかった。
+		PRINTL
+		PRINTL
+		PRINTFORMW 豊姫と恋人同士になりました。
 	ENDIF
 	RETURN 0
 ENDIF
@@ -45,7 +100,12 @@ ENDIF
 ;告白失敗
 ;-------------------------------------------------
 IF ARG == 3
-	;PRINTFORMW 
+		PRINTFORMW 「%CALLNAME:MASTER%の告白嬉しいわ。私も%CALLNAME:MASTER%のこと好きだもの」
+		PRINTFORMW 「けど……」
+		PRINTL
+		PRINTFORMW 「ごめんなさい、私の好きは%CALLNAME:MASTER%のいう意味の好きとは違うと思うの」
+		PRINTFORMW ある程度分かり切っていたことだった。
+		PRINTFORMW %ANAME(豊姫)%はやや深めに頭を下げて、こちらの告白の勇気に対する申し訳なさを示していた。
 	RETURN 0
 ENDIF
 
@@ -53,7 +113,12 @@ ENDIF
 ;押し倒し成功(酒酔いの影響・合意は得られない)
 ;-------------------------------------------------
 IF ARG == 4
-	;PRINTFORMW 
+	PRINTFORMW 酔ってくだを巻く%ANAME(豊姫)%を静かにベッドに横たえると、自然と彼女の豊かな膨らみに視線がいってしまう。
+	PRINTFORMW いつもちゃんと止めているボタンが、何本も外れてだらしなく素肌をのぞかせている。
+	PRINTFORMW 「なによぉ、もう、こんなにふらふらで、あれ、やだぁ、やさひくしてくれなきゃ怒るわよー？」
+	PRINTFORMW 
+	PRINTFORMW 誰が何と言おうと構わない。
+	PRINTFORMW 酒に強い彼女が、ここまで泥酔して隙をさらしている理由は「抱かれたいから」だと正当化して、そのまま行為に及ぶことにした。
 	RETURN 0
 ENDIF
 
