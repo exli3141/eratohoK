@@ -12,6 +12,7 @@
 ;;豊姫ネームが変更されてても豊姫と記述すればいいおまじない。
 ;;毎関数事に使う場合は呼ぶ。
 #DIM 豊姫
+#DIM 依姫
 豊姫 = NAME_TO_CHARA("豊姫")
 ;-------------------------------------------------
 ;ファーストキス実行
@@ -43,6 +44,7 @@ IF ARG == 2
 			PRINTFORMW %ANAME(豊姫)%にとって%CALLNAME:MASTER%は、恋愛対象というよりは家族のような存在だったから。
 		ELSE
 			PRINTFORMW %ANAME(豊姫)%は、仕える主人である%CALLNAME:MASTER%に可愛がられるうち、家族同然の存在だと思っていたから。
+		ENDIF
 		PRINTL
 		PRINTFORMW 他の人間からすれば、なぜ彼女が%CALLNAME:MASTER%を家族などと思ったのか不思議でならないだろう。
 		PRINTFORMW だが%ANAME(豊姫)%にとって、心のつながりも体の交わりも、結ばれるかどうかよりも親しい相手であるかどうかが基準。
@@ -52,7 +54,6 @@ IF ARG == 2
 		PRINTFORMW 「けど……」
 		PRINTL
 		PRINTFORMW 「よりちゃんのことも好きよね？」
-		PRINTFORMW ここで依姫がどう関係するんだろう。
 		SIF CFLAG:依姫:好感度 > 1000
 			PRINTFORMW 依姫は、恋愛に不慣れでついどう接すればいいかわからないだけ、くだけた話し方が苦手で照れる様が可愛いい。
 		SIF TALENT:依姫:恋人
@@ -79,7 +80,6 @@ IF ARG == 2
 		PRINTFORMW 「けど……」
 		PRINTL
 		PRINTFORMW 「よりちゃんのことも好きよね？」
-		PRINTFORMW ここで依姫がどう関係するんだろう。
 		SIF CFLAG:依姫:好感度 > 1000
 			PRINTFORMW 依姫は恋愛に不慣れでついどう接すればいいかわからないだけ、くだけた話し方が苦手で照れる様が可愛いい。
 		SIF TALENT:依姫:恋人
