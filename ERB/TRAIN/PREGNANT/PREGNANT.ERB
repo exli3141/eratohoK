@@ -73,7 +73,7 @@ IF GETBIT(TALENT:(ARG:0):淫乱系, 素質_淫乱_孕みたがり)
 		LOCAL:5 = 300
 	ENDIF
 ;獣変化中は確率上昇
-ELSEIF CFLAG:(ARG:0):獣変化フラグ
+ELSEIF TALENT:(ARG:0):動物耳 || TALENT:(ARG:0):しっぽ
 	;排卵誘発剤使用中は確率上昇
 	IF TCVAR:(ARG:0):65
 		LOCAL:5 = 80
@@ -99,10 +99,11 @@ IF RAND:(LOCAL:5) < SQRT(LOCAL:2 * 100 + 300)
 		IF TCVAR:(ARG:0):(LOCAL:0) != 0
 			LOCAL:3 -= TCVAR:(ARG:0):(LOCAL:0 + 20)
 			IF LOCAL:3 <= 0
-				;父親のIDを設定
-				CFLAG:(ARG:0):子の遺伝上の父親 = TCVAR:(ARG:0):(LOCAL:0)
-					;妊娠期間を1に設定
+				;妊娠期間を1に設定
 				CFLAG:(ARG:0):妊娠期間 = 1
+				;出来た子供の父親を種付け履歴から予測して記録する
+				;いろんな人から種を受けてたらだれが親だかわからなくなったりする処理をする
+				CALL RECORD_FATHER_FROM_CREAMPIE_HISTORY(ARG:0)
 				BREAK
 			ENDIF
 		ENDIF
@@ -116,8 +117,8 @@ ENDIF
 ;---------------------------------------------------------
 @IS_PREGNANT_MSG(ARG:0)
 #FUNCTION
-;主人公が捕虜 or 放浪中の場合、他の士官の状況はわからない
-SIF (CFLAG:MASTER:捕虜先 != 0 || CFLAG:MASTER:所属 == 0) && !FLAG:観戦モード
+;観戦モードでなく、捕虜ないし放浪中の場合、主人公以外は分からない
+SIF (CFLAG:MASTER:捕虜先 != 0 || CFLAG:MASTER:所属 == 0) && !FLAG:観戦モード && ARG:0 != MASTER
 	RETURNF 0
 RETURNF 1
 
@@ -150,22 +151,22 @@ NEXT
 ;ターンエンド時に行う妊娠出産関連の処理の母親系の処理
 ;---------------------------------------------------------
 @TURNEND_PREGNANT_CHECK_MOTHER(ARG:0)
-;妊娠判明前
-IF CFLAG:(ARG:0):妊娠期間 <= 2
-	;妊娠が発覚するまでは疑わしい期間の中出し履歴を残す
+;妊娠していない
+IF CFLAG:(ARG:0):妊娠期間 == 0
 	CALL UPDATE_CREAMPIE_HISTORY(ARG:0)
-ENDIF
-
 ;妊娠中
-IF CFLAG:(ARG:0):妊娠期間 >= 1
+ELSE
 	;妊娠期間を進める
 	CFLAG:(ARG:0):妊娠期間 ++
+	;妊娠2期目
+	IF CFLAG:(ARG:0):妊娠期間 >= 2 && !TALENT:(ARG:0):妊娠
+		CALL DETECT_PREGNANCY(ARG:0)
 	;妊娠7期目
-	IF CFLAG:(ARG:0):妊娠期間 >= 7
+	ELSEIF CFLAG:(ARG:0):妊娠期間 >= 7
 		;7期で出産する
 		CALL BIRTH_CHILD(ARG:0)
-	;妊娠4期目
-	ELSEIF CFLAG:(ARG:0):妊娠期間 >= 4 && CFLAG:(ARG:0):行動不能状態 != 行動不能_臨月
+	;妊娠5期目
+	ELSEIF CFLAG:(ARG:0):妊娠期間 >= 5 && CFLAG:(ARG:0):行動不能状態 != 行動不能_臨月
 		;4期たったら臨月となり通常の活動ができなくなる
 		IF IS_PREGNANT_MSG(ARG:0)
 			CALL KOJO_EVENT(ARG:0, 41)
@@ -176,13 +177,6 @@ IF CFLAG:(ARG:0):妊娠期間 >= 1
 
 		;臨月状態に設定
 		CFLAG:(ARG:0):行動不能状態 = 行動不能_臨月
-
-	;妊娠2期目(ここでようやく妊娠判明)
-	ELSEIF CFLAG:(ARG:0):妊娠期間 >= 2 && !TALENT:(ARG:0):妊娠
-		;4期たったら体調が変動することで妊娠が発覚する
-		CALL DETECT_PREGNANCY(ARG:0)
-
-
 	ENDIF
 ENDIF
 
@@ -195,7 +189,7 @@ IF CFLAG:(ARG:0):育児期間 >= 1
 	LOCAL:5 = ID_TO_CHARA(CFLAG:(ARG:0):育児対象)
 
 	;育児中かつ母親が主人公以外で所属が同じ、捕虜でないなら自動で育てる
-	SIF LOCAL:5 >= 0 && ARG:0 != MASTER && CFLAG:(ARG:0):所属 == CFLAG:(LOCAL:5):所属 && !CFLAG:(LOCAL:5):捕虜先
+	SIF LOCAL:5 >= 0 && ARG:0 != MASTER && CFLAG:(ARG:0):所属 == CFLAG:(LOCAL:5):所属 && !CFLAG:(LOCAL:5):捕虜先 && !CFLAG:(ARG:0):行動済み
 		CALL MOTHER_AUTO_REARING(ARG:0, LOCAL:5, CFLAG:(ARG:0):育児期間)
 
 	;出産後期間が8に達した
@@ -222,7 +216,13 @@ IF IS_PREGNANT_MSG(ARG:0)
 	ELSE
 		PRINTFORML %ANAME(ARG:0)%の様子がおかしい…
 	ENDIF
-	PRINTFORML どうやら%ANAME(ARG:0)%は子供を身篭った様だ
+	PRINTFORM どうやら%ANAME(ARG:0)%は
+	IF GET_SPERM_NAME(CFLAG:(ARG:0):子の父親) != "不明"
+		PRINTFORM %GET_SPERM_NAME(CFLAG:(ARG:0):子の父親)%の
+	ELSE
+		PRINTFORM 名も知れぬ誰かの
+	ENDIF
+	PRINTFORML 子供を身篭った様だ
 	SETCOLOR カラー_注意
 	PRINTFORMW %ANAME(ARG:0)%は[妊娠]しました
 	RESETCOLOR
@@ -241,8 +241,8 @@ IF !TALENT:(ARG:0):母乳体質
 ENDIF
 
 ;女性が妊娠したときすでに妊娠で胸が大きくなっている場合、あるいはもう大きくならない場合を除き胸が大きくなる
-IF IS_FEMALE(ARG:0) && !TALENT:(ARG:0):爆乳 && CFLAG:(ARG:0):妊娠時バストサイズ増加 == 0
-	BUSTSIZE = GET_BUSTSIZE_NUM(ARG:0)
+IF IS_FEMALE(ARG:0) && GET_BUSTSIZE(ARG:0) != 2 && CFLAG:(ARG:0):妊娠時バストサイズ増加 == 0
+	BUSTSIZE = GET_BUSTSIZE(ARG:0)
 	CFLAG:(ARG:0):妊娠時バストサイズ増加 = 1
 	IF IS_PREGNANT_MSG(ARG:0) && BUSTSIZE < 2
 		SETCOLOR カラー_注意
@@ -253,9 +253,6 @@ IF IS_FEMALE(ARG:0) && !TALENT:(ARG:0):爆乳 && CFLAG:(ARG:0):妊娠時バス�
 		CALL SET_BUSTSIZE(ARG:0, BUSTSIZE + 1)
 ENDIF
 
-;出来た子供の父親を種付け履歴から予測して記録する
-;いろんな人から種を受けてたらだれが親だかわからなくなったりする処理をする
-CALL RECORD_FATHER_FROM_CREAMPIE_HISTORY(ARG:0)
 
 IF IS_PREGNANT_MSG(ARG:0)
 	CALL KOJO_EVENT(ARG:0, 40)
@@ -363,6 +360,12 @@ ELSE
 	;子供を被育児状態に設定
 	CFLAG:子供:行動不能状態 = 行動不能_子供
 ENDIF
+
+;∨締まりがゆるくなる
+;拡張経験付かないのかって？　ホルモンやら何やらの効果でおにくの柔軟性上がってただけだからノーカンノーカン
+LOCAL = MAX(TALENT:(ARG:0):Ｖ締まり / 5, 1)
+CALL TIGHTNESS_DECREASE_V(ARG:0, (RAND:LOCAL + RAND:LOCAL + RAND:LOCAL) / 3)
+
 EXP:(ARG:0):出産経験 += 1
 EXP:(ARG:0):出産経験値 += 1
 CALL TRAIN_AUTO_ABLUP(ARG:0, 1)
@@ -381,7 +384,6 @@ IF ABL:(ARG:0):性知識 == 0
 ENDIF
 ;妊娠関係のフラグをクリア
 CFLAG:(ARG:0):妊娠期間 = 0
-CFLAG:(ARG:0):子の遺伝上の父親 = 0
 CFLAG:(ARG:0):子の父親 = 0
 TALENT:(ARG:0):妊娠 = 0
 
@@ -609,21 +611,7 @@ IF TALENT:(ARG:0):幼児 && CFLAG:(ARG:0):子の成長度 >= 15 && IS_CHILD(ARG:
 		CALL SINGLE_EMPTY_LINE
 		RESETCOLOR
 	ENDIF
-	TALENT:(ARG:0):幼児 = 0
-	TALENT:(ARG:0):絶壁 = 0
-	TALENT:(ARG:0):貧乳 = 0
-	TALENT:(ARG:0):巨乳 = 0
-	TALENT:(ARG:0):爆乳 = 0
-	SELECTCASE TALENT:(ARG:0):成長後バスト
-		CASE -2
-			TALENT:(ARG:0):絶壁 = 1
-		CASE -1
-			TALENT:(ARG:0):貧乳 = 1
-		CASE 1
-			TALENT:(ARG:0):巨乳 = 1
-		CASE 2
-			TALENT:(ARG:0):爆乳 = 1
-	ENDSELECT
+	CALL SET_BUSTSIZE(ARG:0, TALENT:(ARG:0):成長後バスト)
 	TALENT:(ARG:0):子供体型 = 0
 	TALENT:(ARG:0):小柄体型 = TALENT:(ARG:0):成長後体型
 	TALENT:(ARG:0):幼稚 = TALENT:(ARG:0):成長後幼稚
@@ -631,18 +619,6 @@ IF TALENT:(ARG:0):幼児 && CFLAG:(ARG:0):子の成長度 >= 15 && IS_CHILD(ARG:
 	;ランダムキャラの設定を流用して陰毛を設定
 	;あくまで暫定的な措置・完全ランダムで遺伝はしない
 	CALL SET_INMOU_RANDOM(ARG:0)
-
-	;一部素質の初期値を現在の値で上書き
-	;CALL SET_INI_TALENT(ARG:0, "幼児")
-	;CALL SET_INI_TALENT(ARG:0, "幼稚")
-	;CALL SET_INI_TALENT(ARG:0, "子供体型")
-	;CALL SET_INI_TALENT(ARG:0, "小柄体型")
-	;CALL SET_INI_TALENT(ARG:0, "絶壁")
-	;CALL SET_INI_TALENT(ARG:0, "貧乳")
-	;CALL SET_INI_TALENT(ARG:0, "巨乳")
-	;CALL SET_INI_TALENT(ARG:0, "爆乳")
-	;CALL SET_INI_TALENT(ARG:0, "陰毛目標値")
-	;CALL SET_INI_TALENT(ARG:0, "陰毛現在値")
 ENDIF
 
 ;---------------------------------------------------------
@@ -739,7 +715,6 @@ FOR LOCAL:0, 0, CHARANUM
 			SIF CFLAG:(LOCAL:0):行動不能状態 == 行動不能_臨月
 				CFLAG:(LOCAL:0):行動不能状態 = 0
 			CFLAG:(LOCAL:0):妊娠期間 = 0
-			CFLAG:(LOCAL:0):子の遺伝上の父親 = 0
 			CFLAG:(LOCAL:0):子の父親 = 0
 			TALENT:(LOCAL:0):妊娠 = 0
 
@@ -827,15 +802,15 @@ IF !TALENT:(ARG:0):妊娠 && CFLAG:(ARG:0):妊娠時バストサイズ増加
 		PRINTFORMW 出産により大きくなっていた%ANAME(ARG:0)%の胸は元に戻りました
 		RESETCOLOR
 	ENDIF
-	SIF INRANGE(GET_BUSTSIZE_NUM(ARG:0), -1, 2)
-		CALL SET_BUSTSIZE(ARG:0, GET_BUSTSIZE_NUM(ARG:0) - 1)
+	SIF INRANGE(GET_BUSTSIZE(ARG:0), -1, 2)
+		CALL SET_BUSTSIZE(ARG:0, GET_BUSTSIZE(ARG:0) - 1)
 	CFLAG:(ARG:0):妊娠時バストサイズ増加 = 0
 ENDIF
 
 ;一時的に母乳体質になっていた場合(再度妊娠していた場合は除く)
 IF CFLAG:(ARG:0):一時的母乳体質 && !TALENT:(ARG:0):妊娠
 	;胸の大きさに応じたABL:噴乳を持ってると母乳体質が永続化する
-	IF ( GET_BUSTSIZE_NUM(ARG:0) < 0 && ABL:(ARG:0):噴乳 >= ランク閾値:ランク_その他:ランク_A ) || ( GET_BUSTSIZE_NUM(ARG:0) == 0 && ABL:(ARG:0):噴乳 >= ランク閾値:ランク_その他:ランク_B ) || ( GET_BUSTSIZE_NUM(ARG:0) > 0 && ABL:(ARG:0):噴乳 >= ランク閾値:ランク_その他:ランク_C )
+	IF ( GET_BUSTSIZE(ARG:0) < 0 && ABL:(ARG:0):噴乳 >= ランク閾値:ランク_その他:ランク_A ) || ( GET_BUSTSIZE(ARG:0) == 0 && ABL:(ARG:0):噴乳 >= ランク閾値:ランク_その他:ランク_B ) || ( GET_BUSTSIZE(ARG:0) > 0 && ABL:(ARG:0):噴乳 >= ランク閾値:ランク_その他:ランク_C )
 		IF ARG:1 && IS_PREGNANT_MSG(ARG:0)
 			SETCOLOR カラー_注意
 			PRINTFORMW %ANAME(ARG:0)%は度重なる噴乳により、子育てが終わったにも係わらず母乳が止まらなくなりました
@@ -1190,8 +1165,11 @@ TARGET = LOCAL:4
 MPLY:0 = ARG:0
 MTAR:0 = ARG:1
 
+SIF IS_COUNTRY(CFLAG:(ARG:0):所属) && CFLAG:(ARG:0):所属 == CFLAG:MASTER:所属
+	PRINTFORML %ANAME(ARG:0)%は%ANAME(ARG:1)%を教育している……
+
 FOR LOCAL, 0, 5
-	SELECTCASE RAND:5
+	SELECTCASE RAND:6
 		CASE 0
 			LOCAL:1 = GETNUM(ABL, "武闘")
 		CASE 1

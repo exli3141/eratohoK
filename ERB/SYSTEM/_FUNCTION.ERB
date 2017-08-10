@@ -177,7 +177,6 @@ LOCAL:9 = 0
 IF CFLAG:(ARG:0):行動不能状態 == 行動不能_子供
 	LOCAL:9 = 1
 ENDIF
-LOCAL:10 = CFLAG:(ARG:0):遺伝上の父親
 LOCAL:11 = CFLAG:(ARG:0):母親
 LOCAL:12 = CFLAG:(ARG:0):父親
 LOCAL:13 = CFLAG:(ARG:0):子の成長度
@@ -211,7 +210,6 @@ NEXT
 IF LOCAL:9
 	CFLAG:(ARG:0):行動不能状態 = 行動不能_子供
 ENDIF
-CFLAG:(ARG:0):遺伝上の父親 = LOCAL:10
 CFLAG:(ARG:0):母親 = LOCAL:11
 CFLAG:(ARG:0):父親 = LOCAL:12
 CFLAG:(ARG:0):子の成長度 = LOCAL:13
@@ -1221,7 +1219,15 @@ RETURNF IS_MALE(ARG:0) == IS_MALE(ARG:1)
 ;-------------------------------------------------
 @IS_ANIMAL(ARG:0)
 #FUNCTION
-RETURNF TALENT:(ARG:0):犬 || TALENT:(ARG:0):豚 || TALENT:(ARG:0):馬
+RETURNF TALENT:(ARG:0):動物
+
+;-------------------------------------------------
+;ARG:0番のキャラが動物系かどうかを返す関数
+;-------------------------------------------------
+@IS_QUADORUPED_ANIMAL(ARG:0)
+#FUNCTION
+RETURNF GROUPMATCH(TALENT:(ARG:0):動物, 動物_犬, 動物_豚, 動物_馬)
+
 
 ;-------------------------------------------------
 ;ARG:0番のキャラが固定キャラ（ランダムキャラ、子供、特殊キャラ)なら1を返す関数
@@ -1240,7 +1246,7 @@ RETURNF INRANGE(NO:(ARG:0), MIN_NO_CHILD, MIN_NO_CHILD + MAX_CHILD - 1)
 
 @IS_SP_CHARA(ARG:0)
 #FUNCTION
-RETURNF NO:(ARG:0)　>= MIN_NO_SP_CHARA
+RETURNF NO:(ARG:0) >= MIN_NO_SP_CHARA
 
 ;-------------------------------------------------
 ;子供・ランダムキャラを追加できるかを返す
@@ -1280,7 +1286,7 @@ ENDIF
 ;-------------------------------------------------
 @IS_BOIN(ARG:0)
 #FUNCTION
-IF TALENT:(ARG:0):巨乳 || TALENT:(ARG:0):爆乳
+IF GET_BUSTSIZE(ARG:0) > 0
 	RETURNF 1
 ELSE
 	RETURNF 0
@@ -1375,42 +1381,22 @@ RETURNF "並乳"
 ;キャラARG:0のバストサイズを数値に変換する
 ;-2:絶壁～2:爆乳
 ;-------------------------------------------------
-@GET_BUSTSIZE_NUM(ARG:0)
+@GET_BUSTSIZE(ARG:0)
 #FUNCTION
-IF IS_MALE(ARG:0)
+SIF IS_MALE(ARG:0)
 	RETURNF -2
-ELSEIF TALENT:(ARG:0):絶壁
-	RETURNF -2
-ELSEIF TALENT:(ARG:0):貧乳
-	RETURNF -1
-ELSEIF TALENT:(ARG:0):巨乳
-	RETURNF 1
-ELSEIF TALENT:(ARG:0):爆乳
-	RETURNF 2
-ENDIF
-RETURNF 0
+RETURNF TALENT:(ARG:0):バストサイズ
 
 ;-------------------------------------------------
 ;キャラARG:0のバストサイズをARG:1にする
 ;-2:絶壁～2:爆乳
 ;-------------------------------------------------
 @SET_BUSTSIZE(ARG:0, ARG:1)
-TALENT:(ARG:0):絶壁 = 0
-TALENT:(ARG:0):貧乳 = 0
-TALENT:(ARG:0):巨乳 = 0
-TALENT:(ARG:0):爆乳 = 0
 SIF IS_MALE(ARG:0)
 	RETURN
-SELECTCASE ARG:1
-	CASE -2
-		TALENT:(ARG:0):絶壁 = 1
-	CASE -1
-		TALENT:(ARG:0):貧乳 = 1
-	CASE 1
-		TALENT:(ARG:0):巨乳 = 1
-	CASE 2
-		TALENT:(ARG:0):爆乳 = 1
-ENDSELECT
+SIF !INRANGE(ARG:1, -2, 2)
+	RETURN 
+TALENT:(ARG:0):バストサイズ = ARG:1
 RETURN
 
 
@@ -1437,43 +1423,24 @@ RETURNF "並根"
 ;キャラARG:0のペニスサイズを数値に変換する
 ;-2:絶壁～2:爆乳
 ;-------------------------------------------------
-@GET_PENISSIZE_NUM(ARG:0)
+@GET_PENISSIZE(ARG:0)
 #FUNCTION
-IF !HAS_PENIS(ARG:0)
+SIF !HAS_PENIS(ARG:0)
 	RETURNF -2
-ELSEIF TALENT:(ARG:0):超短小
-	RETURNF -2
-ELSEIF TALENT:(ARG:0):短小
-	RETURNF -1
-ELSEIF TALENT:(ARG:0):巨根
-	RETURNF 1
-ELSEIF TALENT:(ARG:0):超巨根
-	RETURNF 2
-ENDIF
-RETURNF 0
+RETURNF TALENT:(ARG:0):ペニスサイズ
 
 ;-------------------------------------------------
 ;キャラARG:0のバストサイズをARG:1にする
 ;-2:絶壁～2:爆乳
 ;-------------------------------------------------
 @SET_PENISSIZE(ARG:0, ARG:1)
-TALENT:(ARG:0):超短小 = 0
-TALENT:(ARG:0):短小 = 0
-TALENT:(ARG:0):巨根 = 0
-TALENT:(ARG:0):超巨根 = 0
 SIF !HAS_PENIS(ARG:0)
 	RETURN
-SELECTCASE ARG:1
-	CASE -2
-		TALENT:(ARG:0):超短小 = 1
-	CASE -1
-		TALENT:(ARG:0):短小 = 1
-	CASE 1
-		TALENT:(ARG:0):巨根 = 1
-	CASE 2
-		TALENT:(ARG:0):超巨根 = 1
-ENDSELECT
+SIF !INRANGE(ARG:1, -2, 2)
+	RETURN 
+TALENT:(ARG:0):ペニスサイズ = ARG:1
 RETURN
+
 
 
 
@@ -1745,6 +1712,8 @@ SIF !TALENT:対象:キス未経験
 IF ARG:2
 	SETCOLOR カラー_注意
 	PRINTFORM %ANAME(対象)%は
+	SIF TFLAG:70 == 1
+		PRINTFORM 撮影中に
 	SIF LOST_SITUATION:シチュ != ""
 		PRINTFORM %LOST_SITUATION:シチュ%で
 	PRINTFORMW <キス未経験>を失った…
@@ -1781,6 +1750,8 @@ SIF !TALENT:対象:童貞
 IF ARG:2
 	SETCOLOR カラー_注意
 	PRINTFORM %ANAME(対象)%は
+	SIF TFLAG:70 == 1
+		PRINTFORM 撮影中に
 	SIF LOST_SITUATION:シチュ != ""
 		PRINTFORM %LOST_SITUATION:シチュ%で
 	PRINTFORMW <童貞>を失った…
@@ -1818,6 +1789,8 @@ SIF !TALENT:対象:処女
 IF ARG:2
 	SETCOLOR カラー_注意
 	PRINTFORM %ANAME(対象)%は
+	SIF TFLAG:70 == 1
+		PRINTFORM 撮影中に
 	SIF LOST_SITUATION:シチュ != ""
 		PRINTFORM %LOST_SITUATION:シチュ%で
 	PRINTFORMW <処女>を失った…
@@ -1852,6 +1825,8 @@ SIF !TALENT:対象:アナル処女
 IF ARG:2
 	SETCOLOR カラー_注意
 	PRINTFORM %ANAME(対象)%は
+	SIF TFLAG:70 == 1
+		PRINTFORM 撮影中に
 	SIF LOST_SITUATION:シチュ != ""
 		PRINTFORM %LOST_SITUATION:シチュ%で
 	PRINTFORMW <アナル処女>を失った…
@@ -2426,24 +2401,9 @@ ELSEIF TALENT:(ARG:0):虚ろ
 ELSEIF ID_TO_CHARA(FLAG:お気に入り指定キャラ) == ARG:0
 	SETCOLOR カラー_注意
 	PRINT 推
-ELSEIF GETBIT(TALENT:(ARG:0):特殊勢力陥落系, 特殊勢力_外来人)
-	SETCOLOR 0x0000A0
-	PRINT 外
-ELSEIF GETBIT(TALENT:(ARG:0):特殊勢力陥落系, 特殊勢力_ホフゴブリン)
-	SETCOLOR 0x2B5C1B
-	PRINT ゴ
-ELSEIF GETBIT(TALENT:(ARG:0):特殊勢力陥落系, 特殊勢力_野盗)
-	SETCOLOR 0x800000
-	PRINT 野
-ELSEIF GETBIT(TALENT:(ARG:0):特殊勢力陥落系, 特殊勢力_触手)
-	SETCOLOR 0xFF1493
-	PRINT 寄
-ELSEIF GETBIT(TALENT:(ARG:0):特殊勢力陥落系, 特殊勢力_自警団)
-	SETCOLOR 0x33CC66
-	PRINT 自
-ELSEIF GETBIT(TALENT:(ARG:0):特殊勢力陥落系, 特殊勢力_サキュバス)
-	SETCOLOR 0x8B008B
-	PRINT 夢
+ELSEIF TALENT:(ARG:0):特殊勢力陥落系
+	SETCOLOR カラー_警告
+	PRINT 堕
 ELSEIF TALENT:(ARG:0):親愛
 	SETCOLOR 0xF5CE13
 	PRINT 愛
@@ -2949,35 +2909,54 @@ ENDSELECT
 #DIM Ａ回復量
 #DIM Ｖ初期値
 #DIM Ａ初期値
-IF HAS_VAGINA(対象)
-	Ｖ回復量 = 締まり_最高値 - TALENT:対象:Ｖ締まり
-	Ｖ回復量 = MAX(Ｖ回復量 / 100, 2)
-	Ｖ回復量 = RAND:Ｖ回復量
-	Ｖ回復量 = MAX(Ｖ回復量 * MAX(100 - EXP:対象:Ｖ拡張経験 / 10, 1) / 100, 1)
-ELSE
-	Ｖ回復量 = 0
-ENDIF
-
-Ａ回復量 = 締まり_最高値 - TALENT:対象:Ａ締まり
-Ａ回復量 = MAX(Ａ回復量 / 100, 2)
-Ａ回復量 = RAND:Ａ回復量
-Ａ回復量 = MAX(Ａ回復量 * MAX(100 - EXP:対象:Ａ拡張経験 / 10, 1) / 100, 1)
-
-SIF TALENT:対象:Ｖ締まり >= 締まり_きゅっきゅっ
-	Ｖ回復量 /= 2
-SIF TALENT:対象:Ａ締まり >= 締まり_きゅっきゅっ
-	Ａ回復量 /= 2
+#DIM Ｖ最大回復量
+#DIM Ａ最大回復量
 
 IF EXISTCSV(NO:対象)
 	Ｖ初期値 = CSVTALENT(NO:対象, GETNUM(TALENT, "Ｖ締まり"))
 	Ａ初期値 = CSVTALENT(NO:対象, GETNUM(TALENT, "Ａ締まり"))
-	Ｖ回復量 = MAX(Ｖ回復量 * MAX(Ｖ初期値 / MAX(TALENT:対象:Ｖ締まり / 100, 1), 100) / 100, 1)
-	Ａ回復量 = MAX(Ａ回復量 * MAX(Ａ初期値 / MAX(TALENT:対象:Ａ締まり / 100, 1), 100) / 100, 1)
+ELSE
+	;非固定キャラの締まり初期値は素質から暫定的に検出
+	;基本650 処女+100 小柄体型+100 子供体型+200 幼児+100 現在値と平均を取って最低150最高950
+	Ｖ初期値 = 650 + TALENT:対象:処女 * 100 + TALENT:対象:小柄体型 * 100 + TALENT:対象:子供体型 * 200 + TALENT:対象:幼児 * 100
+	Ｖ初期値 = LIMIT((Ｖ初期値 + TALENT:対象:Ｖ締まり) / 2, 150, 950)
+	Ａ初期値 = 650 + TALENT:対象:アナル処女 * 100 + TALENT:対象:小柄体型 * 100 + TALENT:対象:子供体型 * 200 + TALENT:対象:幼児 * 100
+	Ａ初期値 = LIMIT((Ａ初期値 + TALENT:対象:Ａ締まり) / 2, 150, 950)
 ENDIF
+
+;拡張経験で最大回復量が削れる（0で200　10で190　250で150　1000で100　4000で0　の内中央分布ランダム(ただし最低1)）
+Ｖ最大回復量 = 200 - SQRT(10 * EXP:対象:Ｖ拡張経験)
+Ｖ最大回復量 = MAX(((RAND:Ｖ最大回復量) + (RAND:Ｖ最大回復量) + (RAND:Ｖ最大回復量)) / 3, 1)
+Ａ最大回復量 = 200 - SQRT(10 * EXP:対象:Ａ拡張経験)
+Ａ最大回復量 = MAX(((RAND:Ａ最大回復量) + (RAND:Ａ最大回復量) + (RAND:Ａ最大回復量)) / 3, 1)
+
+IF HAS_VAGINA(対象)
+	;元は
+	; = 2 * (締まり_最高値 - TALENT:対象:Ｖ締まり) / 10 * (Ｖ初期値 / 1000) / MAX((TALENT:対象:Ｖ締まり - 400)/100,1) / MAX((TALENT:対象:Ｖ締まり6 - Ｖ初期値 + 100)/100,1)
+	;のような式ですが、小数点以下が切り捨てられて計算が狂うため整理されてます
+	;基本
+	Ｖ回復量 = 締まり_最高値 - TALENT:対象:Ｖ締まり
+	;初期値が低いほど緩やかに
+	Ｖ回復量 = 2 * Ｖ回復量 * Ｖ初期値
+	;締まり普通以上になるほど、初期値より現在値が大きいほど上昇値に制限
+	Ｖ回復量 = Ｖ回復量 / (MAX((TALENT:対象:Ｖ締まり - 400),100) * MAX((TALENT:対象:Ｖ締まり - Ｖ初期値 + 100),100))
+	;範囲に収める
+	Ｖ回復量 = LIMIT(Ｖ回復量, 1, Ｖ最大回復量)
+ELSE
+	Ｖ回復量 = 0
+ENDIF
+
+;基本
+Ａ回復量 = 締まり_最高値 - TALENT:対象:Ａ締まり
+;初期値が低いほど緩やかに
+Ａ回復量 = 2 * Ａ回復量 * Ａ初期値
+;締まり普通以上になるほど、初期値より現在値が大きいほど上昇値に制限
+Ａ回復量 = Ａ回復量 / (MAX((TALENT:対象:Ａ締まり - 400),100) * MAX((TALENT:対象:Ａ締まり - Ａ初期値 + 200),100))
+;範囲に収める
+Ａ回復量 = LIMIT(Ａ回復量, 1, Ａ最大回復量)
 
 TALENT:対象:Ｖ締まり = LIMIT(TALENT:対象:Ｖ締まり + Ｖ回復量, 締まり_最低値, 締まり_最高値)
 TALENT:対象:Ａ締まり = LIMIT(TALENT:対象:Ａ締まり + Ａ回復量, 締まり_最低値, 締まり_最高値)
-
 
 ;---------------------------
 ;対象の膣の締まりが悪化する処理
@@ -2995,9 +2974,13 @@ SIF !HAS_VAGINA(対象)
 変化前 = %TOSTR_TIGHTNESS(TALENT:対象:Ｖ締まり)%
 
 減少量 = 基準値
-;Ｖ拡張経験が100超えてたら、100につき1乱数で増える
-SIF EXP:対象:Ｖ拡張経験 > 100
-	減少量 += RAND:(MIN(EXP:対象:Ｖ拡張経験 / 100, 5))
+
+;拡張経験の数がそのまま減少量が増える％となる　増えるのは901～1000％の10まで
+;(100ごとに1増える可能性ができる　たとえば130なら1増えるのは確定で、30％の確率でもう1増える)
+FOR LOCAL:0, 0, 10
+	SIF EXP:対象:Ｖ拡張経験 > RAND(LOCAL:0 * 100, (LOCAL:0 + 1) * 100)
+		減少量 ++
+NEXT
 
 TALENT:対象:Ｖ締まり -= 減少量
 
@@ -3006,7 +2989,7 @@ SIF 変化前 != 変化後
 	CALL COLORPRINT(@"%ANAME(対象)%の膣の締まりが%変化後%になった", カラー_注意, "L")
 
 ;---------------------------
-;対象の膣の締まりが悪化する処理
+;対象のアナルの締まりが悪化する処理
 ;---------------------------
 @TIGHTNESS_DECREASE_A(対象, 基準値)
 #DIM 対象
@@ -3018,9 +3001,11 @@ SIF 変化前 != 変化後
 変化前 = %TOSTR_TIGHTNESS(TALENT:対象:Ａ締まり)%
 
 減少量 = 基準値
-;Ａ拡張経験が100超えてたら、100につき1乱数で増える
-SIF EXP:対象:Ａ拡張経験 > 100
-	減少量 += RAND:(MIN(EXP:対象:Ａ拡張経験 / 100, 5))
+
+FOR LOCAL:0, 0, 10
+	SIF EXP:対象:Ａ拡張経験 > RAND(LOCAL:0 * 100, (LOCAL:0 + 1) * 100)
+		減少量 ++
+NEXT
 
 TALENT:対象:Ａ締まり -= 減少量
 
@@ -3178,6 +3163,9 @@ RETURNF MINUEND
 
 CALL FORCE_FREE(対象)
 
+SIF IS_COUNTRY(CFLAG:対象:所属)
+	CFLAG:対象:以前の君主 = COUNTRY_BOSS:(CFLAG:対象:所属)
+
 CFLAG:対象:所属 = 勢力番号
 
 IF 捕虜先クリアフラグ
@@ -3194,9 +3182,6 @@ IF 対象 != MASTER
 		CFLAG:対象:特殊状態 = 死亡フラグ + 1
 	ENDIF
 ENDIF
-
-CFLAG:対象:恨む君主 = 0
-CFLAG:対象:滅亡前の君主 = 0
 
 ;-------------------------------------------------
 ;対象の捕虜先を変更させ、必要な変数操作を行う関数
@@ -3335,7 +3320,7 @@ CLEARLINE 1
 TMP '= HTML_GETPRINTEDSTR(0)
 ;STRFINDは正規表現に対応していないんでこういうことをする羽目になる
 ;実際の正規表現処理にわたるまでに一度エスケープを食らうようなのでスラッシュは二重に渡す必要がある。
-IF FINDELEMENT(TMP, "([^ ])\\1{10}", 0, 1, 0) == 0
+IF FINDELEMENT(TMP, "([^ ])\\1{15}", 0, 1, 0) == 0
 	RETURN
 ELSE
 	DRAWLINEFORM %LINE%

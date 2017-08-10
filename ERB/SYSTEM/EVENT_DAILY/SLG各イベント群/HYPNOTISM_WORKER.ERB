@@ -10,7 +10,7 @@ RETURN 35
 @SLG_EVENT_DAILY_HYPNOTISM_WORKER_DECISION()
 SIF CFLAG:MASTER:捕虜先 != 0
 	RETURN 0
-SIF DVAR:催眠お仕事 != 0
+SIF DVAR:催眠お仕事_状態管理フラグ != 0
 	RETURN 0
 SIF GETBIT(TALENT:MASTER:デイリー系, 素質_デイリー_催眠奴隷) && CFLAG:MASTER:所属 == 0
 	RETURN 0
@@ -209,20 +209,20 @@ ELSE
 			PRINTFORMW …体に刻まれた凌辱の痕に一切気付かないまま
 		ENDIF
 	ELSE
-		PRINTFORML 夕方、彼女が宮殿に帰って来たのを見かけた%ANAME(対象)%は声をかけた
+		PRINTFORML 夕方、彼女が宮殿に帰って来たのを見かけた%ANAME(MASTER)%は声をかけた
 		PRINTFORMW どんな仕事だったかと尋ねると彼女は不思議そうに首を傾げた
 		PRINTFORML そして次の瞬間、ニコッと笑顔になると
 		PRINTFORMW とても為になる仕事だったのでしばらく通ってみようと思う、と告げた
 		IF GETBIT(TALENT:MASTER:デイリー系, 素質_デイリー_催眠奴隷)
 			PRINTFORMW 彼女のその様子に、あなたはだたニヤリと笑った
 		ELSE
-			PRINTFORML %ANAME(対象)%は彼女のその様子に一瞬違和感を覚えたが気のせいだろうと気にしなかった
+			PRINTFORML %ANAME(MASTER)%は彼女のその様子に一瞬違和感を覚えたが気のせいだろうと気にしなかった
 			PRINTFORMW 自室に帰る彼女と別れを告げて仕事に戻った
 			PRINTFORMW …彼女の服の下の凌辱の痕には一切気付けなかった
 		ENDIF
 	ENDIF
-	DVAR:催眠調教中 = GET_ID(対象)
-	DVAR:催眠お仕事 = 1
+	DVAR:催眠お仕事_調教対象ID = GET_ID(対象)
+	DVAR:催眠お仕事_状態管理フラグ = 1
 ENDIF
 
 RETURN 1

@@ -2,6 +2,7 @@
 ;侵攻部隊(ARG:0勢力、ARG:1部隊) vs 侵攻部隊(ARG:2勢力、ARG:3部隊)の戦闘
 ;-------------------------------------------------
 @BATTLE_UNIT_TO_UNIT(ARG:0, ARG:1, ARG:2, ARG:3)
+#DIM FIRST_LINE
 LOCAL:5 = UNIT_POSITION:(ARG:0):(ARG:1)
 BATTLE_NAME:0 = %ANAME(GET_COUNTRY_BOSS(ARG:0))%
 BATTLE_NAME:1 = %ANAME(GET_COUNTRY_BOSS(ARG:2))%
@@ -10,8 +11,12 @@ PRINTFORML ◆◆◆◆◆◆遭遇戦◆◆◆◆◆◆
 SETCOLOR カラー_注釈
 SIF GET_COUNTRY_BOSS(CITY_OWNER:(LOCAL:5)) != -1
 	PRINTFORM %ANAME(GET_COUNTRY_BOSS(CITY_OWNER:(LOCAL:5)))%の所領である
-PRINTFORML %GET_RELAYNAME(LOCAL:5)%において、戦闘が発生しました
+PRINTFORML %GET_RELAYNAME(LOCAL:5)%において、
+PRINTFORML %BATTLE_NAME:0%と%BATTLE_NAME:1%の戦闘が発生しました
+
 RESETCOLOR
+
+FIRST_LINE = LINECOUNT
 
 ;部隊能力を表示
 PRINTL ----------互いの力量----------
@@ -55,6 +60,9 @@ CALL DECREASE_SOLDIER(ARG:2, ARG:3, BATTLE_DMG:1, 1)
 
 $BATTLE_CANCEL
 PRINTL ----------戦闘後処理----------
+
+SIF (CONFIG:300 == 1 && ARG:0 != CFLAG:MASTER:所属 && ARG:2 != CFLAG:MASTER:所属 && IS_COUNTRY(CFLAG:MASTER:所属)) || CONFIG:300 == 2
+	CLEARLINE LINECOUNT - FIRST_LINE
 
 ;好感度・敵対値の変動
 LOCAL:1 = COUNTRY_AI_TYPE:(ARG:0)
@@ -136,15 +144,13 @@ ENDIF
 SIF !CITY_TYPE:(LOCAL:5)
 	CITY_TIRED_COUNT:(LOCAL:5) ++
 
-;自勢力のみウェイト
-IF (ARG:0 == CFLAG:MASTER:所属 || ARG:2 == CFLAG:MASTER:所属 || FLAG:観戦モード) && !LOCAL:9 && CFLAG:MASTER:捕虜先 == 0
-	WAIT
-ENDIF
+WAIT
 
 ;-------------------------------------------------
 ;侵攻部隊(ARG:0勢力、ARG:1部隊) vs 防衛部隊(都市ARG:2)の戦闘
 ;-------------------------------------------------
 @BATTLE_UNIT_TO_CITY(ARG:0, ARG:1, ARG:2)
+#DIM FIRST_LINE
 LOCAL:9 = 0
 
 LOCAL:6 = CITY_OWNER:(ARG:2)
@@ -156,8 +162,12 @@ PRINTFORML ◆◆◆◆◆◆侵攻戦◆◆◆◆◆◆
 SETCOLOR カラー_注釈
 SIF GET_COUNTRY_BOSS(CITY_OWNER:(ARG:2)) != -1
 	PRINTFORM %ANAME(GET_COUNTRY_BOSS(CITY_OWNER:(ARG:2)))%の所領である
-PRINTFORML %GET_CITYNAME(ARG:2)%が侵攻されました
+PRINTFORML %GET_CITYNAME(ARG:2)%が、
+PRINTFORML %BATTLE_NAME:0%に侵攻されました
 RESETCOLOR
+
+FIRST_LINE = LINECOUNT
+
 ;その都市がその勢力にとって最後の1都市なら、全兵力を傾ける
 IF LOCAL:5 >= 0 && GET_OWN_CITY(CITY_OWNER:(ARG:2)) == 1
 	PRINTFORML %BATTLE_NAME:1%は最後の所領の防衛に全兵力を注いだ！
@@ -215,6 +225,11 @@ CALL DECREASE_SOLDIER(ARG:2, -1,    BATTLE_DMG:1, 1)
 
 $BATTLE_CANCEL
 PRINTL ----------戦闘後処理----------
+
+SIF (CONFIG:300 == 1 && (ARG:0 != CFLAG:MASTER:所属 && LOCAL:6 != CFLAG:MASTER:所属) && IS_COUNTRY(CFLAG:MASTER:所属)) || CONFIG:300 == 2
+	CLEARLINE LINECOUNT - FIRST_LINE
+
+
 UNIT_FBATTLE:(ARG:0):(ARG:1) = 1
 CITY_IS_ATTACKED:(ARG:2) = 1
 
@@ -303,7 +318,7 @@ IF CITY_SOLDIER:(ARG:2) <= 0
 			NEXT
 			FOR LOCAL:0, 0, MAX_COUNTRY
 				SIF IS_COUNTRY(LOCAL) && LOCAL != ARG:0 && LOCAL != LOCAL:6
-					CALL CHANGE_RELATION_C_TO_C(LOCAL, ARG:0, (1500 - REL_LIKE:LOCAL:(ARG:0)) / 5, REL_HATE:LOCAL:(ARG:0) / 5)
+					CALL CHANGE_RELATION_C_TO_C(LOCAL, ARG:0, 300, -300)
 			NEXT
 			;外交禁止フラグを立てる
 			COUNTRY_IS_CLOSED:(LOCAL:6) = 1
@@ -373,10 +388,7 @@ ELSE
 	ENDIF
 ENDIF
 
-;自勢力のみウェイト
-IF (ARG:0 == CFLAG:MASTER:所属 || LOCAL:6 == CFLAG:MASTER:所属 || FLAG:観戦モード) && !LOCAL:9 && CFLAG:MASTER:捕虜先 == 0
-	WAIT
-ENDIF
+WAIT
 
 ;-------------------------------------------------
 ;戦闘の共通計算
@@ -969,27 +981,24 @@ NEXT
 #DIM 対象部隊
 #DIM 明察キャラ
 
-SETCOLOR カラー_シアン
+
 PRINTFORML %BATTLE_NAME:(発動側)%軍の計略発動！
 
 
 ;発動勢力勢力部隊の《貫計》判定(武力)
 IF RAND:MAX(BATTLE_ATC:(対象側), 1) + BATTLE_ATC:(対象側) >= RAND:MAX(BATTLE_INT:(発動側) * 3, 1) + BATTLE_INT:(発動側)
-	SETCOLOR カラー_黄緑
 	PRINTFORM 《貫計》
 	PRINTDATAL
 		DATAFORM %BATTLE_NAME:(対象側)%軍は力で%BATTLE_NAME:(発動側)%軍の計略をねじ伏せ無効化した
 		DATAFORM %BATTLE_NAME:(対象側)%軍は%BATTLE_NAME:(発動側)%軍の計略を圧倒的な力で無効化した
 		DATAFORM %BATTLE_NAME:(発動側)%軍の計略は%BATTLE_NAME:(対象側)%軍がもつ力の前では無意味だった
 	ENDDATA
-	RESETCOLOR
 	BATTLE_RATE_DMG:対象側 += 5
 	BATTLE_RATE_ATC:対象側 += 30
 	BATTLE_RATE_GRD:対象側 += 30
 	IF 発動勢力 == CFLAG:MASTER:所属 || 対象勢力 == CFLAG:MASTER:所属
 		CALL WHOES_SCHEME(対象側, 対象勢力, 対象部隊, GETNUM(ABL, "武闘"))
 		IF RESULT >= 0
-			RESETCOLOR
 			;口上の表示
 			CALL KOJO_EVENT(RESULT, 312)
 		ENDIF
@@ -1001,13 +1010,11 @@ ELSE
 		SIF 明察キャラ < 0 || BATTLE_SKILL_SEALED:対象側:(LOCAL:0) || BATTLE_SUMMONED_CHARA:(発動側):(LOCAL:0)
 			CONTINUE
 		IF FIND_PASSIVE_SKILL(明察キャラ, "明察") && 30 > RAND:100
-			SETCOLOR カラー_黄緑
 			PRINTFORM 《明察》
 			PRINTFORML %ANAME(明察キャラ)%は敵部隊の計略を見透かした
 			BATTLE_RATE_DMG:対象側 += 10
 			BATTLE_RATE_ATC:対象側 += 25
 			BATTLE_RATE_GRD:対象側 += 20
-			RESETCOLOR
 			RETURN
 		ENDIF
 	NEXT
@@ -1016,14 +1023,12 @@ ELSE
 	IF 発動勢力 == CFLAG:MASTER:所属 || 対象勢力 == CFLAG:MASTER:所属
 		CALL WHOES_SCHEME(発動側, 発動勢力, 発動部隊, GETNUM(ABL, "知略"))
 		IF RESULT >= 0
-			RESETCOLOR
 			;口上の表示
 			CALL KOJO_EVENT(RESULT, 310)
 		ENDIF
 	ENDIF
 ENDIF
 
-RESETCOLOR
 
 ;-------------------------------------------------
 ;どのキャラが計略を発動させたか決定する関数(口上表示の対象を決める)
@@ -1302,6 +1307,9 @@ FOR LOCAL:0, 0, BATTLE_COMMANDER_NUM:敗北側
 			;素の値
 			;CAPTURE_RATE:LOCAL = LIMIT(CAPTURE_RATE:LOCAL, 10, 80)
 	ENDSELECT
+	;相手が特殊勢力で、その勢力に落ちている場合、ドチャクソ捕らえられやすくなる
+	SIF IS_SP_COUNTRY(COUNTRY_W) && GETBIT(TALENT:(LOCAL:4):特殊勢力陥落系, SP_COUNTRY_TO_CONST(COUNTRY_W))
+		CAPTURE_RATE:LOCAL = 800
 NEXT
 
 ;勝利側・敗北側スキル使用
@@ -1331,7 +1339,9 @@ FOR LOCAL, 0, BATTLE_COMMANDER_NUM:敗北側
 	SIF LOCAL:4 < 0
 		CONTINUE
 	IF CAN_CAPTURE(LOCAL:4) && RAND:1000 < CAPTURE_RATE:LOCAL 
-		IF COUNTRY_L == CFLAG:MASTER:所属
+		IF IS_SP_COUNTRY(COUNTRY_W) && GETBIT(TALENT:(LOCAL:4):特殊勢力陥落系, SP_COUNTRY_TO_CONST(COUNTRY_W))
+			CALL COLORPRINT(@"%ANAME(LOCAL:4)%は自ら捕らえられました", カラー_警告, "W")
+		ELSEIF COUNTRY_L == CFLAG:MASTER:所属
 			CALL COLORPRINT(@"%ANAME(LOCAL:4)%は捕らえられました…", カラー_警告, "W")
 		ELSEIF COUNTRY_W == CFLAG:MASTER:所属
 			CALL COLORPRINT(@"%ANAME(LOCAL:4)%を捕らえました！", カラー_注意, "W")
@@ -1343,8 +1353,6 @@ FOR LOCAL, 0, BATTLE_COMMANDER_NUM:敗北側
 		;解放したなら自勢力に戻ってもらう
 		IF RESULT == 1
 			CFLAG:(LOCAL:4):特殊状態 = 0
-			CFLAG:(LOCAL:4):恨む君主 = 0
-			CFLAG:(LOCAL:4):滅亡前の君主 = 0
 		;処刑したなら無所属に
 		ELSEIF RESULT == 3
 			CALL CHANGE_COUNTRY(LOCAL:4, 0, 0, 1)
@@ -1380,7 +1388,7 @@ FOR LOCAL, 0, BATTLE_COMMANDER_NUM:敗北側
 			SIF !FIND_PASSIVE_SKILL(LOCAL:2, "治療")
 				CONTINUE
 			;治療もちが同じ部隊にいれば確率で、本人の場合は確定で、負傷を軽減する
-			IF LOCAL:2 == LOCAL:4 || RAND:100 < 15
+			IF COOLTIME:(LOCAL:4):0 > 1 && (LOCAL:2 == LOCAL:4 || RAND:100 < 15)
 				COOLTIME:(LOCAL:4):0 = MAX(COOLTIME:(LOCAL:4):0 - 2, 1)
 				SETCOLOR カラー_スキル発動
 				PRINTFORML %ANAME(LOCAL:2)%の治療で、%ANAME(LOCAL:4)%の怪我が軽くなった
@@ -1484,7 +1492,7 @@ NEXT
 ;-------------------------------------------------
 @CITY_GUARD_RATE(ARG:0)
 #FUNCTION
-LOCAL:0 = CITY_GUARD:(ARG:0) * (CITY_ECONOMY:(ARG:0) / 100 + 10000) / 100
+LOCAL:0 = CITY_GUARD:(ARG:0) * (CITY_ECONOMY:(ARG:0) / 50 + 10000) / 100
 
 SIF IS_COUNTRY(CITY_OWNER:(ARG:0)) && COUNTRY_POLICY:(CITY_OWNER:(ARG:0)) == 政策_防衛
 		TIMES LOCAL:0, 1.50
