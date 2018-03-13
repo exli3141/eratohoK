@@ -240,7 +240,7 @@ ELSE
 ENDIF
 
 
-IF CUM_GET_COUNT:(MTAR:0):射精部位_膣内 > 0
+IF CUM_GET_COUNT:(MTAR:0):射精部位_アナル > 0
 	LOCALS:3 = 肛内に出した精液がこぼれないよう
 ELSE
 	LOCALS:3 = 
@@ -303,7 +303,7 @@ IF TALENT:(ARG:0):小柄体型
 ENDIF
 
 ;対象の膣が緩む
-CALL TIGHTNESS_DECREASE_A(ARG:0, RAND:3)
+CALL TIGHTNESS_DECREASE_A(ARG:0, RAND(1, 4))
 CALL VIRGIN_COMMON_A(ARG:0, "アナルバイブ", GET_SITUATION_BY_TRAIN_MODE())
 
 ;-------------------------------------------------

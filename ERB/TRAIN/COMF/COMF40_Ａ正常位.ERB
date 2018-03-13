@@ -4,8 +4,11 @@
 ;コマンド名称
 ;-------------------------------------------------
 @COM_NAME40
-LOCALS:0 = Ａ正常位
-
+IF IS_INSERT_SINGLE(MTAR:0, "Ｖ") && IS_INSERT_MUTUAL(MPLY, MTAR:0) != 1
+	LOCALS:0 = 二穴Ａ正常位
+ELSE
+	LOCALS:0 = Ａ正常位
+ENDIF
 RESULTS:0 = %LOCALS:0%で挿入
 RESULTS:1 = %LOCALS:0%で挿入させられる
 RESULTS:2 = %LOCALS:0%で挿入させる
@@ -422,7 +425,7 @@ ELSE
 					PRINTFORMW %ANAME(MPLY:0)%は%ANAME(MTAR:0)%の尻穴に挿入したまま、さらに激しく腰を動かし%TARGET_STR("た", "てきた")%…
 				;対面座位・騎乗位
 				ELSEIF TFLAG:17 == 2
-					PRINTFORMW %ANAME(MPLY:0)%は挿入したまま%ANAME(MTAR:0)%を押し倒し%LOCALS:1%、上から覆い被さって再び腰を動かし始めた…
+					PRINTFORMW %ANAME(MPLY:0)%は挿入したまま%ANAME(MTAR:0)%を押し倒し、%LOCALS:1%上から覆い被さって再び腰を動かし始めた…
 				;後背位・背面座位・背面騎乗位
 				ELSEIF TFLAG:17 == 3
 					PRINTFORMW %ANAME(MPLY:0)%は挿入したまま%ANAME(MTAR:0)%の体を正面に向けると、%LOCALS:1%上から覆い被さって再び腰を動かし始めた…

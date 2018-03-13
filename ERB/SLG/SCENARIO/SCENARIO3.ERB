@@ -190,7 +190,7 @@ ELSE
 	COUNTRY_COLOR:6 = 0x00FFF7
 	CITY_OWNER:GET_CITYNUMBER("桃園") = 6
 	CITY_OWNER:GET_CITYNUMBER("天人の都") = 6
-	CITY_OWNER:GET_CITYNUMBER("比那名居家総領娘屋敷") = 6
+	CITY_OWNER:GET_CITYNUMBER("比那名居家屋敷") = 6
 	CITY_OWNER:GET_CITYNUMBER("竜宮の遣い専用宿舎") = 6
 	CITY_OWNER:GET_CITYNUMBER("有頂天") = 6
 	;
@@ -247,6 +247,8 @@ CFLAG:(NAME_TO_CHARA("弁々")):特殊状態 = 特殊状態_放浪
 CFLAG:(NAME_TO_CHARA("八橋")):特殊状態 = 特殊状態_放浪
 CFLAG:(NAME_TO_CHARA("菫子")):特殊状態 = 特殊状態_放浪
 CFLAG:(NAME_TO_CHARA("霖之助")):特殊状態 = 特殊状態_放浪
+CFLAG:(NAME_TO_CHARA("エタニティラルバ")):特殊状態 = 特殊状態_放浪
+
 ;こっから追加分
 CFLAG:(NAME_TO_CHARA("ルイズ")):特殊状態 = 特殊状態_放浪
 CFLAG:(NAME_TO_CHARA("サラ")):特殊状態 = 特殊状態_放浪
@@ -282,7 +284,7 @@ CALL INIT_RELATION("チルノ", "大妖精", 500, 0)
 CALL INIT_RELATION("大妖精", "チルノ", 1000, 0)
 
 ;ランダム蜂起をオフ
-CALL SLG_DAILY_SET_DISABLE("RANDOM_RISE", 1)
+CALL DAILY_SET_DISABLE("RANDOM_RISE", 1)
 
 
 ;-------------------------------------------------

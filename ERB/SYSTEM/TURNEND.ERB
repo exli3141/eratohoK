@@ -115,9 +115,6 @@ ELSE
 	SIF FLAG:調教要求フラグ
 		FLAG:調教要求フラグ = 0
 	FLAG:イベント発生禁止 = 0
-	;一応謎勢力にあなたが存在することが無いようにおまじない
-	SIF CFLAG:MASTER:所属 == 0 && CFLAG:MASTER:捕虜先 == 0
-		TIME = 1
 	BEGIN SHOP
 ENDIF
 
@@ -141,7 +138,7 @@ ELSE
 	;捕虜の人数をカウント
 	LOCAL:5 = 0
 	FOR LOCAL:0, 0, CHARANUM
-		IF LOCAL:0 != MASTER && CFLAG:(LOCAL:0):捕虜先 != 0 && CFLAG:(LOCAL:0):捕虜先 == CFLAG:MASTER:所属 && CFLAG:(LOCAL:0):監禁状態 == 0
+		IF LOCAL:0 != MASTER && CFLAG:(LOCAL:0):捕虜先 != 0 && CFLAG:(LOCAL:0):捕虜先 == CFLAG:MASTER:所属 && CFLAG:(LOCAL:0):軟禁中 == 0
 			LOCAL:5 ++
 		ENDIF
 	NEXT
@@ -242,10 +239,6 @@ IF FLAG:強制エンドフラグ == 1
 	RETURN
 ENDIF
 
-;デイリーイベント
-CALL EVENT_DAILY(1)
-CALL EVENT_KOJO_DAILY(1)
-
 ;一期終了時の処理
 SIF !FLAG:ターンエンド調教
 	CALL TURNEND_COMMON
@@ -254,7 +247,7 @@ $SKIPPED
 
 ;時間を進める
 DAY ++
-IF (CFLAG:MASTER:所属 == 0 && CFLAG:MASTER:捕虜先 == 0) || FLAG:観戦モード
+IF FLAG:観戦モード
 	TIME = 1
 ELSE
 	TIME = 0
@@ -272,6 +265,8 @@ VARSET PRISONER_TARGET, -1
 CALL SLAVEMARKET_PREPARE_GOODS
 ;スカウトの対象リストを更新
 CALL SCOUT_PREPARE_CANDIDATES
+;「会いに行く」の対象リストのチェック
+CALL MEET_CHECK_CANDIDATES
 ;特別訓練の価格を更新
 ;次のターンの特別訓練価格になるので、いったんDAYを1増やした（次のターンの値で）計算し、戻す
 DAY ++
@@ -289,7 +284,7 @@ ENDIF
 ;野盗出現しない期間を1へらす
 BANDIT_POP_SUSPENDED = MAX(BANDIT_POP_SUSPENDED - 1, 0)
 
-;イベントキャラの削除
+;自勢力でなくなった動物の削除
 FOR LOCAL:0, CHARANUM - 1, -1, -1
 	IF IS_ANIMAL(LOCAL:0) && CFLAG:(LOCAL:0):所属 != CFLAG:MASTER:所属
 		CALL DELETE_CHARA(LOCAL:0)
@@ -299,8 +294,12 @@ NEXT
 ;このターンの特別訓練実施回数をリセット
 SPECIAL_TRAIN_COUNT_THIS_TURN = 0
 
-;子育てモードのコマンド実行回数をクリア
-CVARSET CFLAG, 27, 0
+ARENA_DONE = 0
+APPOINT_DONE = 0
+
+;都市への投資をクリア
+VARSET CITY_INVESTED
+NOW_INVEST = 0
 
 ;捕虜用変数のクリア
 CVARSET CFLAG, 30, 0
@@ -327,9 +326,6 @@ IF ITEM:触手部屋 && ID_TO_CHARA(FLAG:触手部屋管理者) >= 0 && IS_SYOKU
 	CALL TRAIN_AUTO_ABLUP(ID_TO_CHARA(FLAG:触手部屋管理者), 1)
 ENDIF
 
-;キャラクタの能力をどうこうする処理
-CALL TURNEND_CHARA_PROCESS
-
 CUSTOMDRAWLINE =
 PRINTFORML 各種報告
 CUSTOMDRAWLINE =
@@ -347,12 +343,14 @@ ELSEIF CFLAG:MASTER:捕虜先 == 0
 	LOCAL:0 = CALC_SALARY()
 	MONEY += LOCAL:0
 	PRINTFORML %ANAME(MASTER)%に今期分の俸給が支払われました
-	PRINTFORMW 所持金＋{LOCAL:0}
+	PRINTFORMW 所持金＋{LOCAL:0}（現在:{MONEY}）
 ENDIF
 
 ;各勢力都市の経済規模変動及び税収処理
 CALL VARY_ECONOMY
 CALL GAIN_COUNTRY_TAX
+
+CALL RESET_CITY_TIRED_COUNT
 
 ;経済成長・兵数増強の補正値をクリア
 FLAG:経済成長追加値 = 0
@@ -367,7 +365,7 @@ CALL CHECK_DIPLOMACY_TRAIN_FLAG
 ;アイテム開発イベント
 CALL ITEM_DEVELOPMENT
 
-;妊娠出産関連の処理(触手)
+;妊娠出産関連の処理
 CALL TURNEND_PREGNANT_PHASE
 
 ;特殊な朝イベント
@@ -383,6 +381,24 @@ FOR LOCAL, 0, MAX_COUNTRY
 NEXT
 
 CALL SINGLE_DRAWLINE
+PRINTFORML 脱走・解放
+CALL SINGLE_DRAWLINE
+
+
+;解放カウンタに基づいて解放
+CALL RELEASE_PRISONERS
+
+;捕虜になったときの解放カウンタを加算
+;ただし、特殊勢力は自然解放しない
+FOR LOCAL:0, 0, CHARANUM
+	IF CFLAG:(LOCAL:0):捕虜先 && !IS_SP_COUNTRY(CFLAG:(LOCAL:0):捕虜先)
+		CFLAG:(LOCAL:0):解放カウンタ ++
+	ELSE
+		CFLAG:(LOCAL:0):解放カウンタ = 0
+	ENDIF
+NEXT
+
+CALL SINGLE_DRAWLINE
 PRINTFORML 素質獲得報告
 CALL SINGLE_DRAWLINE
 
@@ -391,22 +407,24 @@ FOR LOCAL:0, 0, CHARANUM
 	CALL TALENT_CHECK(LOCAL:0)
 NEXT
 
+;キャラクタの能力をどうこうする処理
+CALL TURNEND_CHARA_PROCESS
 
 ;-------------------------------------------------
-;料理長による回復
+;娯楽担当による回復
 ;-------------------------------------------------
 @COOK_HEAL(対象 = 0)
 #DIM 対象
 IF GET_COOK() != -1
 	LOCAL = GET_COOK()
 	IF LOCAL != 0 && !CFLAG:(LOCAL):捕虜先 && CFLAG:(LOCAL):所属 == CFLAG:MASTER:所属
-		BASE:対象:体力 = MIN(BASE:対象:体力 + (ABL:LOCAL:料理 / 10 * 100 + RAND:100), MAXBASE:対象:体力)
-		BASE:対象:気力 = MIN(BASE:対象:気力 + (ABL:LOCAL:料理 / 10 * 100 + RAND:100), MAXBASE:対象:気力)
-		PRINTFORML %ANAME(LOCAL)%の料理で、%ANAME(対象)%の体力と気力が回復しました
+		BASE:対象:体力 = MIN(BASE:対象:体力 + BASE:対象:体力 * (ABL:LOCAL:料理 / 2 + ABL:LOCAL:歌唱 / 2 ) / 100, MAXBASE:対象:体力)
+		BASE:対象:気力 = MIN(BASE:対象:気力 + BASE:対象:気力 * (ABL:LOCAL:料理 / 2 + ABL:LOCAL:歌唱 / 2 ) / 100, MAXBASE:対象:気力)
+		PRINTFORML 娯楽担当の%ANAME(LOCAL)%の仕事により、%ANAME(対象)%の体力と気力が回復しました
 	ELSE
 		SETCOLOR カラー_注意
-		PRINTFORML 料理長が国内にいない（捕虜になっている、国外に追放された）ため、その恩恵をうけられません
-		PRINTFORMW !料理長を解除しました!
+		PRINTFORML 娯楽担当が国内にいない（捕虜になっている、国外に追放された）ため、その恩恵をうけられません
+		PRINTFORMW !娯楽担当を解除しました!
 		RESETCOLOR
 		CALL SET_COOK(-1)
 	ENDIF
@@ -421,9 +439,6 @@ FOR LOCAL:0, 0, CHARANUM
 	BASE:(LOCAL:0):0 = MAXBASE:(LOCAL:0):0
 	BASE:(LOCAL:0):1 = MAXBASE:(LOCAL:0):1
 
-	SIF CFLAG:(LOCAL:0):脱走不可能 && !CFLAG:(LOCAL:0):捕虜先
-		CFLAG:(LOCAL:0):脱走不可能 = 0
-	
 	;陰毛が成長
 	CALL INMOU_GROW(LOCAL:0)
 	
@@ -579,7 +594,61 @@ FOR LOCAL:0, 0, CHARANUM
 
 NEXT
 
+;-------------------------------------------------
+;「会いに行く」での放浪中キャラの用意
+;-------------------------------------------------
+@MEET_CHECK_CANDIDATES()
 
+MEET_CANDIDATES_REST_TURN --
+
+FOR LOCAL, 0, MEET_MAX_CANDIDATES
+	LOCAL:1 = ID_TO_CHARA(MEET_CANDIDATES:LOCAL)
+	SIF LOCAL:1 == -1
+		CONTINUE
+	IF CFLAG:(LOCAL:1):特殊状態 != 特殊状態_放浪 || CFLAG:(LOCAL:1):捕虜先
+		ARRAYSHIFT MEET_CANDIDATES, -1, 0, LOCAL, MEET_MAX_CANDIDATES
+	ENDIF
+NEXT
+
+SIF !IS_COUNTRY(CFLAG:MASTER:所属)
+	RETURN 0
+
+IF IS_SP_COUNTRY(CFLAG:MASTER:所属)
+	VARSET MEET_CANDIDATES, 0
+	VARSET MEET_CANDIDATES_REST_TURN, 0
+ENDIF
+
+LOCAL:2 = 1
+
+FOR LOCAL, 0, MEET_MAX_CANDIDATES
+	LOCAL:1 = ID_TO_CHARA(MEET_CANDIDATES:LOCAL)
+	IF LOCAL:1 != -1
+		LOCAL:2 = 0
+		BREAK
+	ENDIF
+NEXT
+
+SIF LOCAL:2
+	MEET_CANDIDATES_REST_TURN = 0
+
+SIF MEET_CANDIDATES_REST_TURN > 0
+	RETURN 0
+
+VARSET MEET_CANDIDATES, 0
+VARSET MEET_CANDIDATES_REST_TURN, 0
+
+CALL SELECT_CHARA_RANDOM_MULTI(MEET_MAX_CANDIDATES, "MEET_CHECK_CANDIDATES")
+
+FOR LOCAL, 0, MIN(MEET_MAX_CANDIDATES, SELECTED_CHARA_NUM)
+	MEET_CANDIDATES:LOCAL = GET_ID(SELECTED_CHARA:LOCAL)
+NEXT
+
+SIF SELECTED_CHARA_NUM > 0
+	MEET_CANDIDATES_REST_TURN = 4
+
+@SELECT_CHARA_RANDOM_LOGIC_MEET_CHECK_CANDIDATES(対象)
+#DIM 対象
+RETURN 対象 != MASTER && !CFLAG:対象:捕虜先 && CFLAG:対象:特殊状態 == 特殊状態_放浪
 
 ;-------------------------------------------------
 ;脱出イベント
@@ -624,6 +693,7 @@ ENDIF
 IF IS_MALE(MASTER)
 	PRINTFORMW 脱出に失敗してしまった……
 	PRINTFORMW 見つかった%ANAME(MASTER)%はキツイ拷問を受けた後、牢屋に戻された
+	RETURN
 ENDIF
 
 PRINTFORMW 脱出に失敗してしまった……
@@ -689,3 +759,79 @@ PRINTFORML
 PRINTFORMW %ANAME(MASTER)%は散々凌辱された後、牢屋に放り込まれた
 
 RETURN 0
+
+
+;-------------------------------------------------
+;解放カウンタに基づいて捕虜を解放する処理
+;-------------------------------------------------
+@RELEASE_PRISONERS()
+#DIM 特殊捕虜先
+VARSET LOCAL
+
+;主人公が捕虜で監禁日数が4日以上ときのみ発生
+IF CFLAG:MASTER:捕虜先 && CFLAG:MASTER:解放カウンタ >= 5 && RAND:100 < (CFLAG:MASTER:解放カウンタ - 5) * 15 + 15
+	CALL SINGLE_DRAWLINE
+	PRINTFORMW 兵士たちが%ANAME(MASTER)%の牢を開け、%ANAME(MASTER)%に対して外に出るように言った
+	PRINTFORMW どうやら%ANAME(MASTER)%は解放されることになったようだ…
+	PRINTL 
+	IF CFLAG:MASTER:所属 == 0
+		SETCOLOR カラー_注意
+		PRINTFORMW %ANAME(MASTER)%は放浪の身になりました
+		RESETCOLOR
+	ELSE
+		SETCOLOR カラー_注意
+		PRINTFORMW %ANAME(MASTER)%は君主の元へと戻りました
+		RESETCOLOR
+	ENDIF
+	CALL CAPTURE(MASTER, 0)
+ENDIF
+
+FOR LOCAL, 1, CHARANUM
+	特殊捕虜先 = IS_SP_COUNTRY(CFLAG:LOCAL:捕虜先)
+	;もしその国が何らかの理由で滅んでいるのにまだ捕らえられていたら、強制的に解放する
+	IF CFLAG:LOCAL:捕虜先 && !IS_COUNTRY(CFLAG:LOCAL:捕虜先)
+		IF !LOCAL:1
+			CALL SINGLE_DRAWLINE
+			LOCAL:1 = 1
+		ENDIF
+		SETCOLOR カラー_注意
+		IF IS_COUNTRY(CFLAG:LOCAL:所属)
+			PRINTFORML 囚われていた%ANAME(LOCAL)%は解放され、%ANAME(GET_COUNTRY_BOSS(CFLAG:LOCAL:所属))%のところに戻りました
+		ELSE
+			PRINTFORML 囚われていた%ANAME(LOCAL)%は解放され、放浪しました
+			CFLAG:LOCAL:特殊状態 = 特殊状態_放浪
+		ENDIF
+		RESETCOLOR
+	;通常の解放処理
+	ELSEIF LOCAL != MASTER && CFLAG:LOCAL:捕虜先 && CFLAG:LOCAL:捕虜先 != CFLAG:MASTER:所属 && MIN((CFLAG:LOCAL:解放カウンタ - 5) * 5, 30) > RAND:100 && !特殊捕虜先
+		IF !LOCAL:1
+			CALL SINGLE_DRAWLINE
+			LOCAL:1 = 1
+		ENDIF
+		SETCOLOR カラー_注意
+		IF IS_COUNTRY(CFLAG:LOCAL:所属)
+			PRINTFORML %ANAME(GET_COUNTRY_BOSS(CFLAG:LOCAL:捕虜先))%に囚われていた%ANAME(LOCAL)%は\@ CFLAG:LOCAL:解放カウンタ >= 10 ? ようやく# \@解放され、%ANAME(GET_COUNTRY_BOSS(CFLAG:LOCAL:1))%のところに戻りました
+		ELSE
+			PRINTFORML %ANAME(GET_COUNTRY_BOSS(CFLAG:LOCAL:捕虜先))%に囚われていた%ANAME(LOCAL)%は解放され、放浪しました
+		ENDIF
+		RESETCOLOR
+		CALL CAPTURE(LOCAL:0, 0)
+	;たまに脱走する。特殊勢力なら率高め
+	ELSEIF (LOCAL != MASTER && CFLAG:LOCAL:捕虜先 && CFLAG:LOCAL:捕虜先 != CFLAG:MASTER:所属 && 特殊捕虜先 * 12 + 3 > RAND:100)
+		IF !LOCAL:1
+			CALL SINGLE_DRAWLINE
+			LOCAL:1 = 1
+		ENDIF
+		IF CFLAG:LOCAL:捕虜先 != CFLAG:LOCAL:所属
+			SETCOLOR カラー_注意
+			IF IS_COUNTRY(CFLAG:LOCAL:1)
+				PRINTFORML %ANAME(GET_COUNTRY_BOSS(CFLAG:LOCAL:捕虜先))%に囚われていた%ANAME(LOCAL)%は脱走し、%ANAME(GET_COUNTRY_BOSS(CFLAG:LOCAL:1))%のところに戻りました
+			ELSE
+				PRINTFORML %ANAME(GET_COUNTRY_BOSS(CFLAG:LOCAL:捕虜先))%に囚われていた%ANAME(LOCAL)%は脱走し、放浪しました
+			ENDIF
+			RESETCOLOR
+			CALL CAPTURE(LOCAL:0, 0)
+		ENDIF
+	ENDIF
+NEXT
+CALL KILL_EMPTY_LINE()

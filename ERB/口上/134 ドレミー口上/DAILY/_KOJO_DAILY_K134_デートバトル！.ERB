@@ -15,7 +15,7 @@ RETURN 1000
 @KOJO_DAILY_K134_DATING_BATTLE_DECISION(対象)
 #DIM 対象
 
-SIF TALENT:対象:恋慕
+SIF !TALENT:対象:恋慕
 	RETURN 0
 
 SIF KDVAR:対象:ドレミー_デートバトル！ == -1
@@ -89,7 +89,7 @@ SELECTCASE KDVAR:対象:ドレミー_デートバトル！
 		PRINTFORMW 
 		PRINTFORML 
 		SETCOLOR カラー_シアン
-		PRINTFORML 天気：晴れ　　　　　曜日：木曜　　　　　想い：恋慕
+		PRINTFORML 天気：晴れ　　　　　曜日：木曜　　　　　BGM：永遠の春夢
 		RESETCOLOR
 		PRINTFORMW 
 		SETCOLOR カラー_オレンジ

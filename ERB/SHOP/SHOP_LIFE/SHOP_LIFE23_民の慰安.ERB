@@ -2,7 +2,11 @@
 ;「民の慰安」の名称
 ;-------------------------------------------------
 @SHOP_LIFE_NAME23
-RESULTS:0 '= "民の慰安"
+IF CFLAG:MASTER:所属
+	RESULTS:0 '= "民の慰安"
+ELSE
+	RESULTS:0 '= "春を売る"
+ENDIF
 
 ;-------------------------------------------------
 ;「民の慰安」の選択可否
@@ -26,7 +30,7 @@ IF ARG:0 == MASTER
 ELSE
 	;閨に呼ぶの選択可能キャラ存在判定
 	CALL SHOP_LIFE_CHECKCHARA_NEYA(ARG:0)
-	RETURN CHECK91(ARG:0, 2, RESULT && !IS_ANIMAL(ARG:0))
+	RETURN CHECK91(ARG:0, 2, RESULT && !IS_ANIMAL(ARG:0) && CFLAG:(ARG:0):所属)
 ENDIF
 RETURN 0
 
@@ -45,6 +49,15 @@ RETURN 0
 ;キャラ, 選択中カラー表示フラグ, ボタン番号に追加する数値, CHECKCHARAの戻り値, 行動済みマークをオフにするフラグ
 CALL COLUMN_RIGHT_CHARALIST_BUTTON(ARG:0, CFLAG:(ARG:0):閨に呼ぶで選択中, SHOP_LIFE_LIST1_ADD_INPUT, ARG:1)
 RETURN 0
+
+;-------------------------------------------------
+;「民の慰安」の右カラムキャラリストボタン（上）表示に追尾させる情報
+;　デフォルトの情報を表示しない場合はRETURN 1
+;-------------------------------------------------
+@SHOP_LIFE_BUTTON_ADD23(ARG:0)
+CALL SHOP_LIFE_BUTTON_ADD_BOTTOM_PRISONER(ARG:0)
+RETURN RESULT
+
 
 ;-------------------------------------------------
 ;「民の慰安」の右カラム表示処理
@@ -82,18 +95,22 @@ CALL COLUMN_RIGHT_LINE
 CALL COLUMN_RIGHT_PRINTL
 IF 選択人数 >= 1
 	PRINTBUTTON "[このメンバーで決定]", 1
+	PRINTPLAIN   
+	PRINTBUTTON "[リセット]", 2
 ELSE
 	SETCOLOR カラー_選択不可
 	PRINTPLAINFORM [このメンバーで決定]
+	PRINTPLAIN   
+	PRINTPLAINFORM [リセット]
 	RESETCOLOR
 ENDIF
 
 PRINTPLAIN   
 IF FLAG:慰安避妊薬
-	PRINTBUTTON "[避妊あり]", 2
+	PRINTBUTTON "[避妊あり]", 3
 ELSE
 	IF MONEY > 選択人数 * 2000
-		PRINTBUTTON "[避妊なし]", 2
+		PRINTBUTTON "[避妊なし]", 3
 	ELSE
 		SETCOLOR カラー_選択不可
 		PRINTPLAINFORM [避妊なし]
@@ -105,7 +122,7 @@ CALL COLUMN_RIGHT_LINE
 CALL COLUMN_RIGHT_PRINTL
 
 ;標準的なキャラリストとページ移動
-CALL COLUMN_RIGHT_CHARALIST
+CALL COLUMN_RIGHT_CHARALIST(1)
 
 RETURN 0
 
@@ -118,8 +135,11 @@ IF ARG:0 == 1
 	CALL DECIDE_IAN_MEMBER()
 	SIF !RESULT
 		RETURN 0
-;避妊ありなし
+;メンバーをリセット
 ELSEIF ARG:0 == 2
+	CALL RESET_IAN_MEMBER
+;避妊ありなし
+ELSEIF ARG:0 == 3
 	LOCAL:1 = 0
 	FOR LOCAL, 0, CHARANUM
 		SIF CFLAG:LOCAL:閨に呼ぶで選択中
@@ -289,6 +309,15 @@ SIF メイン != -1
 CALL START_TRAIN_COMMON
 RETURN 1
 
+;-------------------------------------------------
+;「民の慰安」の選択メンバーのリセット
+;-------------------------------------------------
+@RESET_IAN_MEMBER
+FOR LOCAL:0, 0, CHARANUM
+	SIF CFLAG:(LOCAL:0):閨に呼ぶで選択中
+		CFLAG:(LOCAL:0):閨に呼ぶで選択中 = 0
+NEXT
+RETURN 0
 
 ;-------------------------------------------------
 ;「民の慰安」のモブ追加処理
@@ -370,10 +399,11 @@ TALENT:対象:陰毛現在値 = 陰毛_標準
 TALENT:対象:陰毛目標値 = 陰毛_標準
 TALENT:対象:Ｖ締まり = GET_DEFAULT_TIGHTNESS("普通")
 TALENT:対象:Ａ締まり = GET_DEFAULT_TIGHTNESS("普通")
-TALENT:(対象):処女 = 0
-TALENT:(対象):キス未経験 = 0
-TALENT:(対象):童貞 = 0
-TALENT:(対象):アナル処女 = 1
+TALENT:対象:処女 = 0
+TALENT:対象:キス未経験 = 0
+TALENT:対象:童貞 = 0
+TALENT:対象:アナル処女 = 1
+TALENT:対象:慰安モブ = 種類
 SEXUAL_EXPERIENCE:(対象):初体験_処女 = 不明
 SEXUAL_EXPERIENCE:(対象):初体験_キス = 不明
 SEXUAL_EXPERIENCE:(対象):初体験_童貞 = 不明
@@ -410,7 +440,8 @@ SELECTCASE 行き先
 		 @"{慰安_キャラ_露出狂}", RAND:100 < 10,
 		 @"{慰安_キャラ_貴族}, {慰安_キャラ_富豪}", RAND:100 < 10,
 		 @"{慰安_キャラ_妖怪}", RAND:100 < 20,
-		 @"{慰安_キャラ_子供}", RAND:100 < 30)
+		 @"{慰安_キャラ_子供}", RAND:100 < 30,
+		 @"{慰安_キャラ_チャラ男}", RAND:100 < 30)
 }
 	CASE 慰安_行き先_貴族の居住地
 {
@@ -450,7 +481,11 @@ SELECTCASE 行き先
 	CASE 慰安_行き先_犬舎
 		RETURNF 慰安_キャラ_犬
 	CASE 慰安_行き先_畜舎
-		RETURNF 慰安_キャラ_豚
+{
+		RETURNF IFRAND(
+		 @"{慰安_キャラ_豚}", 1,
+		 @"{慰安_キャラ_馬}", RAND:100 < 50)
+}
 	CASE 慰安_行き先_魔界
 {
 		RETURNF IFRAND(
@@ -484,6 +519,19 @@ SELECTCASE 行き先
 }
 	CASE 慰安_行き先_天界
 		RETURNF 慰安_キャラ_天人
+	CASE 慰安_行き先_湖
+{
+		RETURNF IFRAND(
+		@"{慰安_キャラ_民}, {慰安_キャラ_チャラ男}, {慰安_キャラ_子供}", 1
+		)
+}
+	CASE 慰安_行き先_森
+{
+		RETURNF IFRAND(
+		@"{慰安_キャラ_妖怪}", 1,
+		@"{慰安_キャラ_犬}, {慰安_キャラ_猿}", RAND:100 < 30
+		)
+}
 ENDSELECT
 RETURNF 慰安_キャラ_民
 
@@ -573,6 +621,12 @@ SELECTCASE 種類
 		RETURNF "月兎"
 	CASE 慰安_キャラ_天人
 		RETURNF 性別 == 0 ? "天人" # "天女"
+	CASE 慰安_キャラ_チャラ男
+		RETURNF "チャラ男"
+	CASE 慰安_キャラ_馬
+		RETURNF "馬"
+	CASE 慰安_キャラ_猿
+		RETURNF "猿"
 ENDSELECT
 
 ;-------------------------------------------------
@@ -588,6 +642,7 @@ SELECTCASE 種類
 		ABL:対象:欲望 = RAND(3, 7)
 		ABL:対象:性交 = RAND(4, 7)
 		ABL:対象:射精 = RAND(4, 7)
+		ABL:対象:サド = RAND(1, 4)
 		ABL:対象:主導度Ｕ = RAND(0, 500)
 		ABL:対象:倒錯度 = RAND(0, 300)
 		TALENT:対象:貞操無頓着 = 1
@@ -604,6 +659,7 @@ SELECTCASE 種類
 		ABL:対象:欲望 = RAND(3, 7)
 		ABL:対象:性交 = RAND(3, 5)
 		ABL:対象:射精 = RAND(3, 5)
+		ABL:対象:サド = RAND(0, 3)
 		ABL:対象:主導度Ｕ = RAND(0, 500)
 		ABL:対象:倒錯度 = RAND(0, 300)
 		TALENT:対象:貞操無頓着 = 1
@@ -630,6 +686,8 @@ SELECTCASE 種類
 		ABL:対象:精愛 = RAND(0,2)
 		ABL:対象:射精 = RAND(0,3)
 		ABL:対象:排泄 = RAND(0,2)
+		SIF 種類 == 慰安_キャラ_天狗
+			ABL:対象:サド = RAND(1, 4)
 		ABL:対象:主導度Ｕ = RAND(300, 500)
 		ABL:対象:倒錯度 = RAND(300, 500)
 		TALENT:対象:貞操無頓着 = 1
@@ -680,7 +738,7 @@ SELECTCASE 種類
 		COM_TENDENCY:対象:1111 = 1
 		COM_TENDENCY:対象:112 = 1
 		COM_TENDENCY:対象:114 = 1
-	CASE 慰安_キャラ_兎, 慰安_キャラ_月兎
+	CASE 慰安_キャラ_兎, 慰安_キャラ_月兎, 慰安_キャラ_チャラ男
 		ABL:対象:欲望 = RAND(5,10)
 		ABL:対象:性技 = RAND:2
 		ABL:対象:性交 = RAND(5,10)
@@ -702,6 +760,7 @@ SELECTCASE 種類
 		ABL:対象:露出 = 2
 		ABL:対象:射精 = 3
 		ABL:対象:排泄 = 2
+		ABL:対象:サド = RAND(0, 3)
 		ABL:対象:主導度Ｕ = 500
 		ABL:対象:主導度Ｎ = 300
 		ABL:対象:倒錯度 = 300
@@ -716,7 +775,7 @@ SELECTCASE 種類
 		CALL VIRGINIZE(対象, 初体験_アナル処女)
 		CALL VIRGINIZE(対象, 初体験_童貞)
 		CALL VIRGINIZE(対象, 初体験_キス)
-	CASE 慰安_キャラ_犬, 慰安_キャラ_豚
+	CASE 慰安_キャラ_犬, 慰安_キャラ_豚, 慰安_キャラ_馬, 慰安_キャラ_猿
 		ABL:対象:Ｃ感 = RAND(3, 6)
 		ABL:対象:欲望 = RAND(3, 8)
 		ABL:対象:性技 = RAND:3
@@ -725,7 +784,16 @@ SELECTCASE 種類
 		ABL:対象:射精 = RAND(3, 8)
 		TALENT:対象:動物耳 = 1
 		TALENT:対象:しっぽ = 1
-		TALENT:対象:(種類 == 慰安_キャラ_犬 ? GETNUM(TALENT, "犬") # GETNUM(TALENT, "豚")) = 1
+		SELECTCASE 種類
+			CASE 慰安_キャラ_犬
+				TALENT:対象:動物 = 動物_犬
+			CASE 慰安_キャラ_豚
+				TALENT:対象:動物 = 動物_豚
+			CASE 慰安_キャラ_馬
+				TALENT:対象:動物 = 動物_馬
+			CASE 慰安_キャラ_猿
+				TALENT:対象:動物 = 動物_猿
+		ENDSELECT
 	CASE 慰安_キャラ_悪魔
 		ABL:対象:欲望 = RAND(4,7)
 		ABL:対象:性技 = RAND(3,8)
@@ -734,6 +802,7 @@ SELECTCASE 種類
 		ABL:対象:精愛 = RAND(0,2)
 		ABL:対象:射精 = RAND(0,3)
 		ABL:対象:排泄 = RAND(0,2)
+		ABL:対象:サド = RAND(3, 6)
 		ABL:対象:主導度Ｕ = RAND(300, 500)
 		ABL:対象:倒錯度 = RAND(300, 500)
 		TALENT:対象:Ｓ気質 = 1
@@ -752,6 +821,7 @@ SELECTCASE 種類
 		ABL:対象:露出 = 1
 		ABL:対象:射精 = 4
 		ABL:対象:排泄 = 2
+		ABL:対象:サド = RAND(0, 3)
 		ABL:対象:主導度Ｕ = 700
 		ABL:対象:主導度Ｎ = 300
 		ABL:対象:倒錯度 = 300
@@ -771,6 +841,7 @@ SELECTCASE 種類
 		ABL:対象:性交 = 0
 		ABL:対象:射精 = 0
 		ABL:対象:排泄 = 2
+		ABL:対象:サド = RAND(0, 4)
 		ABL:対象:主導度Ｕ = 700
 		ABL:対象:倒錯度 = 600
 		TALENT:対象:技師 = 1
@@ -787,6 +858,9 @@ ENDSELECT
 @SHOW_IAN_MESSAGE(対象, 人数)
 #DIM 対象
 #DIM 人数
+SIF !CFLAG:MASTER:所属
+	RETURN 0
+
 SELECTCASE IFRAND("0TO2", 1, "3", IS_FEMALE(対象))
 	CASE 0
 		PRINTFORML 民を喜ばせることが勢力を強くする

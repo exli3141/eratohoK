@@ -10,6 +10,8 @@ RESULTS:0 '= "説得させる"
 @SHOP_LIFE_CHECK32
 SIF CFLAG:MASTER:捕虜先
 	RETURN 0
+SIF !CFLAG:MASTER:所属
+	RETURN 0
 RETURN 1
 
 ;-------------------------------------------------
@@ -24,7 +26,7 @@ RETURN CHECK91(ARG:0, 2, ARG:0 != MASTER && CFLAG:(ARG:0):所属 != CFLAG:MASTER
 ;-------------------------------------------------
 @SHOP_LIFE_CHECKCHARA_SUB32(ARG:0)
 ;捕虜でない、通常状態または育児中、同一勢力
-RETURN CHECK91(ARG:0, 2, CFLAG:(ARG:0):捕虜先 == 0 && GROUPMATCH(CFLAG:(ARG:0):行動不能状態, 0, 2) && CFLAG:(ARG:0):所属 == CFLAG:MASTER:所属)
+RETURN CHECK91(ARG:0, 2, CFLAG:(ARG:0):捕虜先 == 0 && GROUPMATCH(CFLAG:(ARG:0):行動不能状態, 0, 2) && CFLAG:(ARG:0):所属 == CFLAG:MASTER:所属 && !IS_ANIMAL(ARG:0))
 
 ;-------------------------------------------------
 ;関数名変更にともなうSHOPフォルダ外ファイルからの呼び出し対応
@@ -135,7 +137,7 @@ CALL COLUMN_RIGHT_TITLE("対象と担当者を選択", "0", "1", "対象と担�
 CALL COLUMN_RIGHT_PRINTL
 CALL COLUMN_RIGHT_LINE
 CALL COLUMN_RIGHT_PRINTL
-IF MENUVAR:0 >= 1
+IF MENUVAR:0 >= 0 && CFLAG:(MENUVAR:0):捕虜先 == CFLAG:MASTER:所属
 	PRINTBUTTON "[このメンバーで決定]", 1
 ELSE
 	SETCOLOR カラー_選択不可
@@ -192,13 +194,15 @@ RETURN 0
 ;このメンバーで決定
 SELECTCASE ARG:0 
 	CASE 1
-		CALL SHOP_LIFE_SETTOKU(MENUVAR:0)
-		IF !RESULT
-			REDRAW 1
-		ELSE
-			SHOP_TIME ++
-			LINES_SHOP = LINECOUNT
-			BEGIN TURNEND
+		IF MENUVAR:0 >= 0 && CFLAG:(MENUVAR:0):捕虜先 == CFLAG:MASTER:所属
+			CALL SHOP_LIFE_SETTOKU(MENUVAR:0)
+			IF !RESULT
+				REDRAW 1
+			ELSE
+				SHOP_TIME ++
+				LINES_SHOP = LINECOUNT
+				BEGIN TURNEND
+			ENDIF
 		ENDIF
 	CASE 2
 		CALL SHOP_LIFE_SETTOKU_SELECT_BEST_MEMBER(MENUVAR:0)
@@ -287,6 +291,10 @@ RETURN 0
 #DIM 対象
 VARSET 説得者, -1
 VARSET 説得者数
+
+SIF !(対象 >= 0 && CFLAG:(対象):捕虜先 == CFLAG:MASTER:所属)
+	RETURN 0
+
 FOR LOCAL:0, 0, CHARANUM
 	IF CFLAG:LOCAL:捕虜調教の助手
 		説得者:説得者数 = LOCAL
@@ -383,6 +391,7 @@ ENDIF
 IF SETTOKU_REL_EFFECT(対象, 説得者君主) >= 95 && 判定値 > 100 && ABL_POWER(ABL:説得者:政治, 説得者) + ABL_POWER(ABL:説得者:知略, 説得者) > ABL_POWER(ABL:対象:政治, 対象) + ABL_POWER(ABL:対象:知略, 対象)
 	CALL COLORPRINT(@"説得の末、%ANAME(対象)%は移籍の意思を固めた……", カラー_注意, "W")
 	CALL CHANGE_COUNTRY(対象, CFLAG:説得者:所属, 1)
+	MENUVAR:0 = 0
 	RETURN 2
 ENDIF
 

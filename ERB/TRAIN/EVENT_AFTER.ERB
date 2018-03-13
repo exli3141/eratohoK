@@ -8,6 +8,8 @@
 ;体力気力を0～最大値の範囲に収める
 CALL LIFE_LIMIT
 
+TRAIN_PLACE = 
+
 FLAG:夜這い = 0
 
 IF FLAG:調教モード == 7
@@ -20,7 +22,7 @@ IF FLAG:調教モード == 7
 	FLAG:慰安モード = 0
 ENDIF
 
-;削除待ち状態のキャラを一斉削除
+;慰安用のモブはここで削除する
 LOCAL:2 = CHARANUM
 FOR LOCAL:0, 0, LOCAL:2
 	LOCAL:1 = LOCAL:2 - LOCAL:0 - 1
@@ -132,7 +134,7 @@ ENDIF
 ;性知識アップ
 FOR LOCAL:0, 0, CHARANUM
 	IF IS_PARTICIPATE_TRAIN(LOCAL) && ABL:(LOCAL:0):性知識 < 4
-		LOCAL:1 = MIN(SUM_EX(LOCAL:0) / MAX(ABL:(LOCAL:0):性知識 * 2, 1), 30)
+		LOCAL:1 = MIN(SUM_EX(LOCAL:0) / MAX(ABL:(LOCAL:0):性知識 * 2, 1), 100)
 		CALL PRINT_ADD_EXP(LOCAL:0, "性知識経験値", LOCAL:1, 1)
 		CALL TRAIN_AUTO_ABLUP(LOCAL:0)
 	ENDIF
@@ -180,9 +182,9 @@ FOR LOCAL:0, 0, CHARANUM
 NEXT
 IF CONFIG:42
 	FOR LOCAL:0, 0, CHARANUM
-		CALL 性癖一括変更(LOCAL,3000)
-		CALL 性癖一括変更(LOCAL,5000)
-		CALL 性癖一括変更(LOCAL,7000)
+		CALL 性癖一括変更(LOCAL,10000)
+		CALL 性癖一括変更(LOCAL,12000)
+		CALL 性癖一括変更(LOCAL,14000)
 	NEXT
 ENDIF
 ;追加アイテムの削除
@@ -237,7 +239,9 @@ BEGIN TURNEND
 #DIM 経済追加
 #DIM 兵数追加
 #DIM 最低保証
+#DIM 参加者
 
+参加者 = 0
 絶頂回数合計 = 0
 
 ;慰安参加者を削除
@@ -250,33 +254,45 @@ FOR 対象, 0, CHARANUM
 			絶頂回数合計 += SUM_EX(対象)
 		ENDIF
 
-		減少量 = LIMIT(300 + SUM_EX(対象) * 20, 0, MAX(CFLAG:対象:好感度, 0) / 3)
 		IF TALENT:対象:親愛
-			最低保証 = MIN(10000, CFLAG:対象:好感度)
+			最低保証 = 10000
 		ELSEIF TALENT:対象:恋慕
-			最低保証 = MIN(1500, CFLAG:対象:好感度)
+			最低保証 = 1500
 		ELSE
-			最低保証 = MIN(-1000, CFLAG:対象:好感度)
+			最低保証 = -1000
 		ENDIF
+		減少量 = LIMIT(300 + SUM_EX(対象) * 20, 0, MAX(CFLAG:対象:好感度, 0) / 10)
+		SIF CFLAG:対象:好感度 - 減少量 < 最低保証
+			減少量 = MAX(CFLAG:対象:好感度 - 最低保証, 0)
 		CFLAG:対象:好感度 = MAX(CFLAG:対象:好感度 - 減少量, 最低保証)
 		PRINTFORML %ANAME(対象)%の好感度 -{減少量} (現在:{CFLAG:対象:好感度})
 
-		最低保証 = MIN(-1000, CFLAG:対象:依存度)
-		減少量 = LIMIT(300 + SUM_EX(対象) * 20, 0, MAX(CFLAG:対象:依存度, 0) / 3)
+		IF TALENT:対象:親愛 || TALENT:対象:隷属
+			最低保証 = 3000
+		ELSEIF TALENT:対象:恋慕 || TALENT:対象:服従
+			最低保証 = 300
+		ELSE
+			最低保証 = -1000
+		ENDIF
+		減少量 = LIMIT(300 + SUM_EX(対象) * 20, 0, MAX(CFLAG:対象:依存度, 0) / 10)
+		SIF CFLAG:対象:依存度 - 減少量 < 最低保証
+			減少量 = MAX(CFLAG:対象:依存度 - 最低保証, 0)
 		CFLAG:対象:依存度 = MAX(CFLAG:対象:依存度 - 減少量, 最低保証)
 		PRINTFORML %ANAME(対象)%の依存度 -{減少量} (現在:{CFLAG:対象:依存度})
 
 		IF TALENT:対象:隷属
-			最低保証 = MIN(10000, CFLAG:対象:従属度)
+			最低保証 = 10000
 		ELSEIF TALENT:対象:服従
-			最低保証 = MIN(1500, CFLAG:対象:従属度)
+			最低保証 = 1500
 		ELSE
-			最低保証 = MIN(-1000, CFLAG:対象:従属度)
+			最低保証 = -1000
 		ENDIF
-		減少量 = LIMIT(300 + SUM_EX(対象) * 20, 0, MAX(CFLAG:対象:従属度, 0) / 3)
-		CFLAG:対象:従属度 = MAX(CFLAG:対象:従属度 - 減少量, -1000)
+		減少量 = LIMIT(300 + SUM_EX(対象) * 20, 0, MAX(CFLAG:対象:従属度, 0) / 10)
+		SIF CFLAG:対象:従属度 - 減少量 < 最低保証
+			減少量 = MAX(CFLAG:対象:従属度 - 最低保証, 0)
+		CFLAG:対象:従属度 = MAX(CFLAG:対象:従属度 - 減少量, 最低保証)
 		PRINTFORML %ANAME(対象)%の従属度 -{減少量} (現在:{CFLAG:対象:従属度})
-
+		参加者 ++
 	ELSEIF IS_PARTICIPATE_TRAIN(対象) && CFLAG:対象:慰安参加者
 		絶頂回数合計 += SUM_EX(対象)
 		CFLAG:対象:慰安参加者 = 0
@@ -284,7 +300,8 @@ FOR 対象, 0, CHARANUM
 NEXT
 SIF FLAG:慰安避妊薬
 	TIMES 絶頂回数合計, 0.7
-報酬 = 絶頂回数合計 * RAND(40, 60)
+
+報酬 = 絶頂回数合計 * RAND(40, 60) * MAX(参加者, 1)
 
 MONEY += 報酬
 CALL ICPRINT(@"慰安により、金<{報酬}>を得ました", "W", カラー_注意)
@@ -455,6 +472,8 @@ SELECTCASE RESULT
 			ENDIF
 		NEXT
 ENDSELECT
+
+TFLAG:70 = 0
 
 ;-------------------------------------------------
 ;調教後自慰のチェック
@@ -632,24 +651,6 @@ LOCAL:6 = MIN(SQRT(MAX(LOCAL:5 - 240, 0) / 10), 30)
 RESULT:2 = MAX(LOCAL:6 - RAND:(LOCAL:6 / 5 + 2), 1)
 
 RETURN RESULT:0
-
-;-------------------------------------------------
-;搾乳した母乳の売却
-;-------------------------------------------------
-;母乳を売却する関数
-;   ARG:0 売るキャラのキャラ番号
-@SELL_MILK(ARG:0)
-#DIM MILK_AMOUNT
-#DIM VALUE
-MILK_AMOUNT = CALC_MILK_VALUE(ARG:0)
-IF MILK_AMOUNT > 0
-	VALUE = CALC_MILK_VALUE(ARG:0, MILK_AMOUNT)
-	PRINTFORML 搾乳器を使って%ANAME(ARG:0)%から{MILK_AMOUNT}ccの母乳を搾り出した。
-	PRINTFORML %ANAME(ARG:0)%の母乳には{VALUE}の買値が付いた。
-	MONEY += VALUE
-	PRINTFORML 所持金 {VALUE}増加
-	WAIT
-ENDIF
 
 ;-------------------------------------------------
 ;調教後のキャラ間印象値改善処理

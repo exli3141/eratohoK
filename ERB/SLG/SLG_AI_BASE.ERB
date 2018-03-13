@@ -44,13 +44,13 @@ AI_POLICY_PRIORITY:AI_ホフゴブリン:0 =  70, 130, 130
 ;AI毎の侵攻判断
 ;第1引数 AIタイプ
 ;第2引数 判断に用いるパラメータ 0:最低数 1:最大数 2:許容疲労度
-AI_ARMY_PROPERTY:AI_通常:0 =         2500, 40000, 20
-AI_ARMY_PROPERTY:AI_好戦:0 =         1500, 25000, 50
-AI_ARMY_PROPERTY:AI_防衛:0 =         3000, 60000, 10
-AI_ARMY_PROPERTY:AI_外交:0 =         4000, 50000, 20
-AI_ARMY_PROPERTY:AI_内政:0 =         2500, 40000, 15
-AI_ARMY_PROPERTY:AI_蛮行:0 =         1000, 20000, 100
-AI_ARMY_PROPERTY:AI_ホフゴブリン:0 = 3000, 30000, 30
+AI_ARMY_PROPERTY:AI_通常:0 =         2500, 100000, 20
+AI_ARMY_PROPERTY:AI_好戦:0 =         1500, 100000, 50
+AI_ARMY_PROPERTY:AI_防衛:0 =         3000, 100000, 10
+AI_ARMY_PROPERTY:AI_外交:0 =         4000, 100000, 20
+AI_ARMY_PROPERTY:AI_内政:0 =         2500, 100000, 15
+AI_ARMY_PROPERTY:AI_蛮行:0 =         1000, 100000, 100
+AI_ARMY_PROPERTY:AI_ホフゴブリン:0 = 3000, 100000, 30
 
 ;AI毎の外交判断
 ;第1引数 AIタイプ
@@ -76,3 +76,14 @@ AI_DEPLOY:AI_内政:0 =         150, 90, 50
 ;この二つはだいたい特殊勢力用
 AI_DEPLOY:AI_蛮行:0 =         300, 10, 0
 AI_DEPLOY:AI_ホフゴブリン:0 = 150, 10, 0
+
+;第1引数 AIタイプ
+;第2引数 判断に用いるパラメータ 0:投資する都市数 1,支払合計額割合 2,支払合計額上限
+;                                      0 , 1  , 2
+AI_INVEST_PROPERTY:AI_通常:0 =         3 , 30 , 10000
+AI_INVEST_PROPERTY:AI_好戦:0 =         2 , 20 , 7000
+AI_INVEST_PROPERTY:AI_防衛:0 =         4 , 40 , 15000
+AI_INVEST_PROPERTY:AI_外交:0 =         5 , 40 , 20000
+AI_INVEST_PROPERTY:AI_内政:0 =         5 , 50 , 30000
+AI_INVEST_PROPERTY:AI_蛮行:0 =         1 , 10 , 5000
+AI_INVEST_PROPERTY:AI_ホフゴブリン:0 = 1 , 5  , 5000

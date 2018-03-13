@@ -4,7 +4,7 @@
 ;■定数
 ;-------------------------------------------------
 ;都市の最大数
-#DIM CONST MAX_CITY = 150
+#DIM CONST MAX_CITY = 170
 
 ;勢力の最大数
 #DIM CONST MAX_COUNTRY = 35
@@ -41,7 +41,7 @@
 #DIM SHOWN_CITY
 
 ;開始からの外交・編成禁止期間
-#DIM CONST SLG_PP = 5, 7, 10
+#DIM CONST SLG_PP = 3, 7, 10
 
 ;使用するマップ
 #DIMS SAVEDATA MAPID = "DEFAULT"
@@ -55,6 +55,9 @@
 ;シナリオのIDと選択用数値
 #DIMS SCENARIO_ID,     SCENARIO_NUMBER
 #DIM  SCENARIO_SELECT, SCENARIO_NUMBER
+
+;そのターンの投資回数
+#DIM SAVEDATA NOW_INVEST
 
 
 ;-------------------------------------------------
@@ -88,13 +91,13 @@
 ;都市のカラー設定(一時的なもの)
 #DIM CITY_COLOR, MAX_CITY
 
-;都市がこのターンまでに継続的に攻撃を受けた回数
+;都市の疲労度。都市上での戦闘・攻撃で増える
 #DIM CITY_TIRED_COUNT, MAX_CITY
 
 ;都市がこのターン攻撃を受けたか
 #DIM CITY_IS_ATTACKED, MAX_CITY
 
-;都市が直前までのターンに継続して攻撃を受けた回数。1ターン攻撃されなければリセット
+;都市上で直前までのターンの疲労度。
 #DIM PAST_CITY_TIRED_COUNT, MAX_CITY
 ;都市の名前
 #DIMS CITY_NAME, MAX_CITY
@@ -102,6 +105,9 @@
 
 ;都市（非抜け道）の数
 #DIM CITY_NUM
+
+;そのターン都市に投資したフラグ
+#DIM CITY_INVESTED, MAX_CITY
 
 ;-------------------------------------------------
 ;■勢力に関する変数 ※0番の勢力は無所属で固定
@@ -252,7 +258,7 @@
 ;上から順にダメージ値、兵数、攻撃、防御、知略、妖術、遊撃部隊かどうかのフラグ、勢力名称
 #DIM BATTLE_DMG, 2
 #DIM BATTLE_SOL, 2
-#DIM BATTLE_ATC, 2
+#DIM BATTLE_ATK, 2
 #DIM BATTLE_DEF, 2
 #DIM BATTLE_INT, 2
 #DIM BATTLE_MAG, 2
@@ -313,6 +319,9 @@
 #DIM AI_ARMY_PROPERTY, 7 ,3
 ;AIの政治判断に関する配列
 #DIM AI_DIPLOMACY_PROPERTY, 7, 5
+
+;AIの投資に関する配列
+#DIM AI_INVEST_PROPERTY,7, 5
 
 ;AIによる緊急動員
 #DIM AI_DEPLOY, 7, 3

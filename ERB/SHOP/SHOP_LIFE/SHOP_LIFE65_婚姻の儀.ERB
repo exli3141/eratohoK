@@ -12,6 +12,8 @@ SIF MONEY < 100000
 	RETURN 0
 SIF CFLAG:MASTER:捕虜先
 	RETURN 0
+SIF !CFLAG:MASTER:所属
+	RETURN 0
 ;既に婚姻している場合婚姻は不可能
 ;HAS_WIFE = 0
 ;FOR LOCAL:0, 0, CHARANUM
@@ -48,9 +50,9 @@ CALL COLUMN_RIGHT_PRINTL
 CALL COLUMN_RIGHT_LINE
 CALL COLUMN_RIGHT_PRINTL
 IF HAS_WIFE()
-	CALL COLORPRINT(@" 好感度の高いキャラを妾または夫にすることができます", カラー_注釈)
+	CALL COLORPRINT(@" 高好感度で恋人か烙印所持の士官を妾(夫)にできます", カラー_注釈)
 ELSE
-	CALL COLORPRINT(@" 好感度の高いキャラを一人だけ正妻または夫にすることができます", カラー_注釈)
+	CALL COLORPRINT(@" 高好感度で恋人か烙印所持の士官を正妻（夫）にできます", カラー_注釈)
 ENDIF
 CALL COLUMN_RIGHT_PRINTL
 CALL COLUMN_RIGHT_LINE
@@ -87,11 +89,6 @@ IF RESULT == 1
 	RETURN 0
 ENDIF
 
-IF HAS_WIFE()
-	TALENT:(ARG:0):妾 = 1
-ELSE
-	TALENT:(ARG:0):正妻 = 1
-ENDIF
 MONEY -= 100000
 
 ;口上の表示
@@ -107,6 +104,12 @@ PRINTFORMW 式の当日、多くの観衆に祝福されながら、%ANAME(MASTE
 IF !HAS_WIFE()
 	;口上の表示
 	CALL KOJO_EVENT(ARG:0, 91)
+ENDIF
+
+IF HAS_WIFE()
+	TALENT:(ARG:0):妾 = 1
+ELSE
+	TALENT:(ARG:0):正妻 = 1
 ENDIF
 
 PRINTL 

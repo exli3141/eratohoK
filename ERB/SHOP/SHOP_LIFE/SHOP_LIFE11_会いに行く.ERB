@@ -43,11 +43,17 @@ LOCAL:0 = TMP_COUNTRY_RELATION:(CFLAG:MASTER:所属):(CFLAG:(ARG:0):所属)
 ;捕虜として捕まえている場合
 IF CFLAG:(ARG:0):捕虜先
 	;非主人公、主人公勢力の捕虜かつ軟禁中
-	RETURN CHECK91(ARG:0, 2, ARG:0 != MASTER && CFLAG:(ARG:0):捕虜先 == CFLAG:MASTER:所属 && CFLAG:(ARG:0):監禁状態 == 1 && !IS_ANIMAL(ARG:0))
+	RETURN CHECK91(ARG:0, 2, ARG:0 != MASTER && CFLAG:(ARG:0):捕虜先 == CFLAG:MASTER:所属 && CFLAG:(ARG:0):軟禁中 == 1 && !IS_ANIMAL(ARG:0) && SHOP_LIFE_11_GET_FILTER(ARG:0))
 ENDIF
-;捕虜でない、非主人公、同一勢力or共闘勢力
-RETURN CHECK91(ARG:0, 2, ARG:0 != MASTER && LOCAL:0 >= 2 && !IS_ANIMAL(ARG:0))
 
+;放浪時
+IF !CFLAG:MASTER:所属
+	;捕虜でない、非主人公、放浪中
+	RETURN CHECK91(ARG:0, 2, ARG:0 != MASTER && CFLAG:(ARG:0):特殊状態 == 特殊状態_放浪 && !IS_ANIMAL(ARG:0) && SHOP_LIFE_11_GET_FILTER(ARG:0))
+ELSE
+	;捕虜でない、非主人公、同一勢力or共闘勢力or放浪中で候補リストにいる
+	RETURN CHECK91(ARG:0, 2, ARG:0 != MASTER && (LOCAL:0 >= 2 || FINDELEMENT(MEET_CANDIDATES, GET_ID(ARG:0)) != -1) && !IS_ANIMAL(ARG:0) && SHOP_LIFE_11_GET_FILTER(ARG:0))
+ENDIF
 ;-------------------------------------------------
 ;「会いに行く」の選択可能キャラ存在判定リスト２（下・補佐）
 ;　リスト２（下）が存在する場合、こちらで判定を行う
@@ -107,7 +113,7 @@ RETURN 0
 
 ;-------------------------------------------------
 ;「会いに行く」の右カラムキャラリスト１（上）のボタンに追尾させる情報
-;　「投獄する」や「料理長」等のように
+;　「投獄する」や「娯楽担当」等のように
 ;　デフォルトのボタンでは表示されない能力値を添えたい場合や
 ;　自動的に表示される情報が不要なときこれを用意する
 ;
@@ -153,6 +159,12 @@ CALL COLUMN_RIGHT_TITLE("対象者選択", "0", "1", "1", "0")
 CALL COLUMN_RIGHT_PRINTL
 CALL COLUMN_RIGHT_LINE
 CALL COLUMN_RIGHT_PRINTL
+PRINTBUTTON @"[%SHOP_LIFE_11_GET_FILTER_MODE(), MAX_CHARANAME_LENGTH, LEFT%]", 1
+PRINTPLAIN   
+PRINTBUTTON @"[%"フィルタ設定", MAX_CHARANAME_LENGTH, LEFT%]", 2
+CALL COLUMN_RIGHT_PRINTL
+CALL COLUMN_RIGHT_LINE
+CALL COLUMN_RIGHT_PRINTL
 ;標準的なキャラリストとページ移動
 CALL COLUMN_RIGHT_CHARALIST
 RETURN 0
@@ -163,7 +175,15 @@ RETURN 0
 ;　RETURN 0:CLEARLINE LINECOUNT - LINES_SHOPする
 ;　RETURN 1:CLEARLINE LINECOUNT - LINES_SHOPしない
 ;-------------------------------------------------
-;@SHOP_LIFE_EVENTBUY_SUB11(ARG:0)
+@SHOP_LIFE_EVENTBUY_SUB11(ARG:0)
+;表示フィルタ切り替え
+IF ARG:0 == 1
+	SHOP_LIFE_11_FILTER_MODE = ROUND_INCREMENT(SHOP_LIFE_11_FILTER_MODE, 0, VARSIZE("SHOP_LIFE_11_FILTER", 0) - 1)
+	RETURN 0
+;表示フィルタ設定
+ELSEIF ARG:0 == 2
+	CALL SHOP_LIFE_11_SET_FILTER
+ENDIF
 
 ;-------------------------------------------------
 ;「会いに行く」のリスト１（上）入力処理
@@ -220,7 +240,7 @@ IF CFLAG:(ARG:0):捕虜先
 		RETURN 1
 	ELSEIF RESULT == 1
 		PRINTFORMW %ANAME(ARG:0)%を投獄しました
-		CFLAG:(ARG:0):監禁状態 = 0
+		CFLAG:(ARG:0):軟禁中 = 0
 		REDRAW 1
 		RETURN 1
 	ELSEIF RESULT == 2 && !FLAG:クリアフラグ
@@ -277,15 +297,6 @@ ELSE
 				CFLAG:ARG:教育方針 ++
 			ENDIF
 			GOTO SHOW_LOOP_INFO_A
-		ELSE
-			GOTO NORMAL_MEET
-		ENDIF
-	ELSEIF TALENT:(ARG:0):幼児
-		LOCALS = %EDUCATION(CFLAG:ARG:教育方針)%
-		PRINTL [0] 普通に会う [1] やっぱりやめる
-		PRINTL
-		INPUT
-		IF  RESULT == 1
 		ELSE
 			GOTO NORMAL_MEET
 		ENDIF

@@ -4,8 +4,11 @@
 ;コマンド名称
 ;-------------------------------------------------
 @COM_NAME44
-LOCALS:0 = Ａ騎乗位
-
+IF IS_INSERT_SINGLE(MTAR:0, "Ｖ") && IS_INSERT_MUTUAL(MPLY, MTAR:0) != 1
+	LOCALS:0 = 二穴Ａ騎乗位
+ELSE
+	LOCALS:0 = Ａ騎乗位
+ENDIF
 RESULTS:0 = %LOCALS:0%で奉仕させる
 RESULTS:1 = %LOCALS:0%で責められる
 RESULTS:2 = %LOCALS:0%で跨る
@@ -55,9 +58,6 @@ SIF IS_EQUIP_PLAYER(MPLY:0, 110)
 	RETURN 0
 ;ターゲットが土下座しているなら不可
 SIF IS_EQUIP_PLAYER(MTAR:0, 110)
-	RETURN 0
-;ターゲットが拘束中なら不可
-SIF IS_BIND(MTAR:0)
 	RETURN 0
 ;プレイヤーが貝合わせ中・双頭バイブ使用中なら不可
 SIF IS_EQUIP_PLAYER(MPLY:0, 21) || IS_EQUIP_TARGET(MPLY:0, 21) || IS_EQUIP_PLAYER(MPLY:0, 22) || IS_EQUIP_TARGET(MPLY:0, 22)
@@ -453,7 +453,7 @@ IF IS_EQUIP_PLAYER((MPLY:0), 50)
 			PRINTFORM %ANAME(MTAR:0)%は
 			IF TALENT:(MTAR:0):小柄体型 || TALENT:(MTAR:0):子供体型
 				PRINT 小さな身体で懸命に
-			ELSEIF TALENT:(MTAR:0):爆乳 || TALENT:(MTAR:0):巨乳
+			ELSEIF GET_BUSTSIZE(MTAR:0) > 0
 				PRINTFORM その%STR_BODY("胸：長", MTAR:0)%を揺らしながら
 			ELSE
 				PRINT 自ら
@@ -542,7 +542,7 @@ ELSE
 			PRINTFORM %ANAME(MTAR:0)%は
 			IF TALENT:(MTAR:0):小柄体型 || TALENT:(MTAR:0):子供体型
 				PRINT 小さな身体で懸命に
-			ELSEIF TALENT:(MTAR:0):爆乳 || TALENT:(MTAR:0):巨乳
+			ELSEIF GET_BUSTSIZE(MTAR:0) > 0
 				PRINTFORM その%STR_BODY("胸：長", MTAR:0)%を揺らしながら
 			ELSE
 				PRINT 自ら

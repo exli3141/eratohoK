@@ -4,7 +4,12 @@
 ;コマンド名称
 ;-------------------------------------------------
 @COM_NAME36
-LOCALS:0 = 二本挿入
+
+IF IS_INSERT_SINGLE(MTAR:0, "Ａ") && IS_INSERT_MUTUAL(MPLY, MTAR:0) != 2
+	LOCALS:0 = 二穴二本挿入
+ELSE
+	LOCALS:0 = 二本挿入
+ENDIF
 
 RESULTS:0 = %LOCALS:0%する
 RESULTS:1 = %LOCALS:0%させられる
@@ -178,11 +183,6 @@ RETURN 1
 ;継続状態の処理
 ;-------------------------------------------------
 @COM_EQUIP36(ARG:0)
-;実行判定
-CALL COM_ORDER_COMMON
-SIF RESULT == 0
-	RETURN 0
-
 ;挿入関係を一時リセット
 
 FOR LOCAL:0, 0, MEQUIP_PLAYER_NUM:(ARG:0)

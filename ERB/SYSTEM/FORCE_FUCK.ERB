@@ -38,8 +38,15 @@ ABL:対象:倒錯度 += (10 + RAND:5) * MIN(5 , (TALENT:対象:Ｍ気質 + TALEN
 ABL:対象:主導度Ｎ = LIMIT(ABL:対象:主導度Ｎ, -1000, 1000)
 ABL:対象:主導度Ｕ = LIMIT(ABL:対象:主導度Ｕ, -1000, 1000)
 ABL:対象:倒錯度 = LIMIT(ABL:対象:倒錯度, 0, 1000)
-SIF SP_TRAIN_IS_DECREASE_CFLAG(対象, 勢力番号)
+IF SP_TRAIN_IS_DECREASE_CFLAG(対象, 勢力番号)
 	追加処理文字列 '= 追加処理文字列 + ", CFLAG減少"
+	IF CFLAG:対象:所属 == 勢力番号
+		CALL CHANGE_RELATION_O_TO_C(対象, 勢力番号, 30, -30)
+	ELSE
+		CALL CHANGE_RELATION_O_TO_C(対象, 勢力番号, 30, -30)
+		CALL CHANGE_RELATION_O_TO_C(対象, CFLAG:対象:所属, -30, 30)
+	ENDIF
+ENDIF
 CALL FUCK(対象, 経験値文字列, 追加処理文字列, 膣内射精相手ID, キス相手, セックス相手, 童貞相手, シチュ)
 
 
@@ -200,27 +207,27 @@ FOR LOCAL, 0, VARSIZE("経験値")
 	経験値:LOCAL = %REPLACE(経験値:LOCAL, "　", "")%
 
 	IF 経験値:LOCAL == "Ｃ"
-		EXP:対象:Ｃ感経験値 += ABL:対象:Ｃ感 * 4 + 4 + RAND:3
+		EXP:対象:Ｃ感経験値 += ABL:対象:Ｃ感 * 5 + 4 + RAND:3
 		LOCAL:1 += ABL:対象:Ｃ感
 		CONTINUE
 	ENDIF
 	
 	IF 経験値:LOCAL == "Ｖ" && HAS_VAGINA(対象)
-		EXP:対象:Ｖ感経験値 += ABL:対象:Ｖ感 * 4 + 4 + RAND:4
+		EXP:対象:Ｖ感経験値 += ABL:対象:Ｖ感 * 5 + 4 + RAND:4
 		LOCAL:1 += ABL:対象:Ｖ感
-		CALL TIGHTNESS_DECREASE_V(対象, RAND(5, 10))
+		CALL TIGHTNESS_DECREASE_V(対象, RAND(10, 20))
 		CONTINUE
 	ENDIF
 
 	IF 経験値:LOCAL == "Ｂ"
-		EXP:対象:Ｂ感経験値 += ABL:対象:Ｂ感 * 4 + 4 + RAND:4
+		EXP:対象:Ｂ感経験値 += ABL:対象:Ｂ感 * 5 + 4 + RAND:4
 		LOCAL:1 += ABL:対象:Ｂ感
 		CONTINUE
 	ENDIF
 	
 	IF 経験値:LOCAL == "Ａ"
-		EXP:対象:Ａ感経験値 += ABL:対象:Ａ感 * 4 + 4 + RAND:4
-		CALL TIGHTNESS_DECREASE_A(対象, RAND(5, 10))
+		EXP:対象:Ａ感経験値 += ABL:対象:Ａ感 * 5 + 4 + RAND:4
+		CALL TIGHTNESS_DECREASE_A(対象, RAND(10, 20))
 		LOCAL:1 += ABL:対象:Ａ感
 		CONTINUE
 	ENDIF
@@ -315,13 +322,13 @@ FOR LOCAL, 0, VARSIZE("経験値")
 
 	IF 経験値:LOCAL == "Ｖ拡張" && HAS_VAGINA(対象)
 		EXP:対象:Ｖ拡張経験 += RAND:5
-		CALL TIGHTNESS_DECREASE_V(対象, RAND(5, 10))
+		CALL TIGHTNESS_DECREASE_V(対象, RAND(10, 20))
 		CONTINUE
 	ENDIF
 	
 	IF 経験値:LOCAL == "Ａ拡張"
 		EXP:対象:Ａ拡張経験 += RAND:5
-		CALL TIGHTNESS_DECREASE_A(対象, RAND(5, 10))
+		CALL TIGHTNESS_DECREASE_A(対象, RAND(10, 20))
 		CONTINUE
 	ENDIF
 
@@ -459,7 +466,7 @@ FOR LOCAL, 0, VARSIZE("追加処理")
 		CONTINUE
 	ENDIF
 	
-	IF 追加処理:LOCAL == "CFLAG減少"
+	IF 追加処理:LOCAL == "CFLAG減少" && 対象 != MASTER
 		CFLAG:対象:好感度 = MAX(CFLAG:対象:好感度 - LIMIT(CFLAG:対象:好感度 / 10, 200, 5000) , -1000)
 		CFLAG:対象:依存度 = MAX(CFLAG:対象:依存度 - LIMIT(CFLAG:対象:依存度 / 10, 200, 5000) , -1000)
 		CFLAG:対象:従属度 = MAX(CFLAG:対象:従属度 - LIMIT(CFLAG:対象:従属度 / 10, 200, 5000) , -1000)
@@ -483,9 +490,6 @@ FOR LOCAL, 0, VARSIZE("追加処理")
 	ENDIF
 	
 	IF 追加処理:LOCAL == "膣内射精"
-		FOR LOCAL:1, 440, 480
-			TCVAR:対象:(LOCAL:1) = 0
-		NEXT
 		EXP:対象:膣内射精経験 += RAND(2, 5)
 		CALL RECORD_INJECTION(対象, 膣内射精相手ID, 8)
 		CALL CHECK_PREGNANT(対象)
